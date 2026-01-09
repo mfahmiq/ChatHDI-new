@@ -149,7 +149,9 @@ export const aiModels = [
   { id: 'hdi-code', name: 'HDI Code', description: 'Spesialis coding', icon: '💻' },
   // Hugging Face Image Generation Models
   { id: 'hdi-image', name: 'HDI Image', description: 'Generate gambar dengan AI (Gratis)', icon: '🎨', category: 'image' },
-  { id: 'hdi-image-flux', name: 'HDI Image Flux', description: 'Model terbaru FLUX.1 (Gratis)', icon: '✨', category: 'image' }
+  { id: 'hdi-image-flux', name: 'HDI Image Flux', description: 'Model terbaru FLUX.1 (Gratis)', icon: '✨', category: 'image' },
+  // Hugging Face Video Generation Models
+  { id: 'hdi-video', name: 'HDI Video', description: 'Generate video dengan AI (Gratis, Lambat)', icon: '🎬', category: 'video' }
 ];
 
 export const generateMockResponse = (userMessage) => {

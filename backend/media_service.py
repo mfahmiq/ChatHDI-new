@@ -59,6 +59,14 @@ HF_IMAGE_MODELS = {
     "hdi-image-flux": "black-forest-labs/FLUX.1-schnell"
 }
 
+# Hugging Face Models for video generation
+HF_VIDEO_MODELS = {
+    "text-to-video": "ali-vilab/text-to-video-ms-1.7b",
+    "default": "ali-vilab/text-to-video-ms-1.7b",
+    # Frontend model IDs (from dropdown)
+    "hdi-video": "ali-vilab/text-to-video-ms-1.7b"
+}
+
 
 # ============ MASTER PROMPT ENGINEERING TEMPLATES ============
 
@@ -441,24 +449,58 @@ class MediaService:
                 'error': str(e)
             }
     
-    async def generate_video(self, prompt: str, model: str = 'sora') -> dict:
+    async def generate_video(self, prompt: str, model: str = 'hdi-video') -> dict:
         """
-        Generate video (placeholder - requires special API access)
+        Generate video using HuggingFace Inference API
         
         Args:
             prompt: Text prompt for video generation
-            model: Model to use
+            model: Model alias or full model name
             
         Returns:
             dict with 'success', 'video_base64', 'error'
         """
-        # Video generation requires special API access
-        return {
-            'success': False,
-            'video_base64': None,
-            'model': model,
-            'error': 'Video generation not available. Requires special API access.'
-        }
+        if not self.hf_client:
+            return {
+                'success': False,
+                'video_base64': None,
+                'model': model,
+                'error': 'Hugging Face client not available. Please set HUGGINGFACE_API_KEY in .env'
+            }
+        
+        try:
+            # Get full model name from alias
+            model_name = HF_VIDEO_MODELS.get(model, HF_VIDEO_MODELS['default'])
+            
+            logger.info(f"Generating video with HuggingFace model: {model_name}")
+            logger.info(f"Prompt: {prompt[:100]}...")
+            
+            # Generate video using HuggingFace
+            video_bytes = self.hf_client.text_to_video(
+                prompt=prompt,
+                model=model_name
+            )
+            
+            # Convert to base64
+            video_base64 = base64.b64encode(video_bytes).decode('utf-8')
+            
+            logger.info("Video generated successfully with HuggingFace")
+            
+            return {
+                'success': True,
+                'video_base64': video_base64,
+                'model': model_name,
+                'error': None
+            }
+            
+        except Exception as e:
+            logger.error(f"HuggingFace video generation error: {e}")
+            return {
+                'success': False,
+                'video_base64': None,
+                'model': model,
+                'error': str(e)
+            }
     
     def get_master_prompts(self) -> Dict:
         """Return all master prompt templates"""
