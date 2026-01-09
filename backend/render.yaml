@@ -1,0 +1,38 @@
+# Render.com deployment configuration for ChatHDI Backend
+# Deploy via: https://render.com/docs/deploy-from-repo
+
+services:
+  - type: web
+    name: chathdi-backend
+    runtime: python
+    region: singapore  # Closest to Indonesia
+    plan: free
+    
+    # Build configuration
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    
+    # Environment variables (set these in Render dashboard)
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      - key: GROQ_API_KEY
+        sync: false  # Set manually in dashboard - REQUIRED
+      - key: HUGGINGFACE_API_KEY
+        sync: false  # Set manually in dashboard - REQUIRED
+      - key: GEMINI_API_KEY
+        sync: false  # Optional
+      - key: OPENAI_API_KEY
+        sync: false  # Optional
+      - key: CORS_ORIGINS
+        sync: false  # Set to your Vercel frontend URL
+      - key: MONGO_URL
+        sync: false  # Optional: MongoDB Atlas connection string
+      - key: DB_NAME
+        value: "chathdi"
+    
+    # Health check
+    healthCheckPath: /api/health
+    
+    # Auto-deploy from main branch
+    autoDeploy: true
