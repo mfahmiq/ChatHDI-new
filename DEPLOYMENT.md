@@ -1,87 +1,96 @@
 # 🚀 ChatHDI Deployment Guide
 
-Panduan lengkap untuk deploy ChatHDI ke Render (Backend) dan Vercel (Frontend).
+Panduan lengkap untuk deploy ChatHDI ke **Hugging Face Spaces** (Backend) dan **Vercel** (Frontend).
+
+> ✅ **Tidak perlu kartu kredit** - Semua gratis!
 
 ## 📋 Prasyarat
 
 1. Akun [GitHub](https://github.com) - untuk host kode
-2. Akun [Render](https://render.com) - untuk backend (gratis)
+2. Akun [Hugging Face](https://huggingface.co) - untuk backend (gratis)
 3. Akun [Vercel](https://vercel.com) - untuk frontend (gratis)
 4. API Keys yang diperlukan:
    - [Groq API](https://console.groq.com/keys) - **Wajib** (untuk chat AI)
-   - [Hugging Face](https://huggingface.co/settings/tokens) - **Wajib** (untuk image generation)
+   - [Hugging Face Token](https://huggingface.co/settings/tokens) - **Wajib** (untuk image generation)
    - [Google Gemini API](https://aistudio.google.com/apikey) - Opsional
 
 ---
 
-## 🔧 Langkah 1: Push ke GitHub
+## 🖥️ Langkah 1: Deploy Backend ke Hugging Face Spaces
 
-```bash
-# Inisialisasi git (jika belum)
-git init
+### A. Buat Space Baru
 
-# Tambahkan semua file
-git add .
-
-# Commit
-git commit -m "Initial commit - ChatHDI deployment ready"
-
-# Buat repository baru di GitHub, lalu:
-git remote add origin https://github.com/USERNAME/chathdi.git
-git branch -M main
-git push -u origin main
-```
-
----
-
-## 🖥️ Langkah 2: Deploy Backend ke Render
-
-### A. Buat Web Service Baru
-
-1. Login ke [Render Dashboard](https://dashboard.render.com)
-2. Klik **"New +"** → **"Web Service"**
-3. Connect ke GitHub repository Anda
-4. Pilih repository `chathdi`
-
-### B. Konfigurasi Service
+1. Login ke [Hugging Face](https://huggingface.co)
+2. Klik **Profile** → **New Space**
+3. Isi konfigurasi:
 
 | Setting | Value |
 |---------|-------|
-| **Name** | `chathdi-backend` |
-| **Region** | Singapore (atau terdekat) |
-| **Branch** | `main` |
-| **Root Directory** | `backend` |
-| **Runtime** | Python 3 |
-| **Build Command** | `pip install -r requirements.txt` |
-| **Start Command** | `uvicorn server:app --host 0.0.0.0 --port $PORT` |
-| **Plan** | Free |
+| **Space name** | `chathdi-api` |
+| **License** | MIT |
+| **SDK** | Docker |
+| **Hardware** | CPU basic (Free) |
+| **Visibility** | Public |
 
-### C. Set Environment Variables
+4. Klik **Create Space**
 
-Di bagian **"Environment"**, tambahkan:
+### B. Upload Backend Files
 
-| Key | Value |
-|-----|-------|
-| `GROQ_API_KEY` | *(API key Groq Anda)* - **Wajib** |
-| `HUGGINGFACE_API_KEY` | *(API key HuggingFace Anda)* - **Wajib** |
-| `GEMINI_API_KEY` | *(API key Gemini Anda)* - Opsional |
-| `CORS_ORIGINS` | `https://your-app.vercel.app` |
-| `DB_NAME` | `chathdi` |
+**Cara 1: Via Web Interface**
+1. Di halaman Space, klik **Files** → **+ Add file** → **Upload files**
+2. Upload semua file dari folder `backend/`:
+   - `server.py`
+   - `ai_service.py`
+   - `media_service.py`
+   - `pptx_service.py`
+   - `rnd_models.py`
+   - `requirements.txt`
+   - `Dockerfile`
+   - `README.md`
 
-> ⚠️ **Penting**: Setelah deploy frontend, update `CORS_ORIGINS` dengan URL frontend yang benar!
+**Cara 2: Via Git** (Recommended)
+```bash
+# Clone Space repository
+git clone https://huggingface.co/spaces/YOUR_USERNAME/chathdi-api
+cd chathdi-api
 
-### D. Deploy
+# Copy backend files
+cp -r /path/to/ChatHDI-new/backend/* .
 
-1. Klik **"Create Web Service"**
+# Push ke HuggingFace
+git add .
+git commit -m "Initial backend deployment"
+git push
+```
+
+### C. Set Environment Variables (Secrets)
+
+1. Di halaman Space, klik **Settings** → **Repository secrets**
+2. Tambahkan secrets berikut:
+
+| Secret Name | Value |
+|-------------|-------|
+| `GROQ_API_KEY` | *(API key Groq Anda)* |
+| `HUGGINGFACE_API_KEY` | *(Token HuggingFace Anda)* |
+| `GEMINI_API_KEY` | *(Opsional)* |
+| `CORS_ORIGINS` | `*` *(sementara, nanti ganti dengan URL Vercel)* |
+
+3. Klik **Save**
+
+### D. Tunggu Build Selesai
+
+1. Kembali ke tab **App**
 2. Tunggu proses build (3-5 menit)
-3. Setelah selesai, catat URL backend Anda:
-   - Contoh: `https://chathdi-backend.onrender.com`
+3. Setelah selesai, Space akan aktif di:
+   ```
+   https://YOUR_USERNAME-chathdi-api.hf.space
+   ```
 
 ### E. Test Backend
 
 Buka browser dan akses:
 ```
-https://chathdi-backend.onrender.com/api/health
+https://YOUR_USERNAME-chathdi-api.hf.space/api/health
 ```
 
 Response yang diharapkan:
@@ -95,13 +104,13 @@ Response yang diharapkan:
 
 ---
 
-## 🌐 Langkah 3: Deploy Frontend ke Vercel
+## 🌐 Langkah 2: Deploy Frontend ke Vercel
 
 ### A. Import Project
 
 1. Login ke [Vercel Dashboard](https://vercel.com/dashboard)
 2. Klik **"Add New..."** → **"Project"**
-3. Import repository GitHub `chathdi`
+3. Import repository GitHub `mfahmiq/ChatHDI-new`
 
 ### B. Konfigurasi Project
 
@@ -110,7 +119,7 @@ Response yang diharapkan:
 | **Project Name** | `chathdi` |
 | **Framework Preset** | Create React App |
 | **Root Directory** | `frontend` |
-| **Build Command** | `yarn build` atau `npm run build` |
+| **Build Command** | `npm run build` |
 | **Output Directory** | `build` |
 
 ### C. Set Environment Variables
@@ -119,9 +128,9 @@ Di bagian **"Environment Variables"**, tambahkan:
 
 | Key | Value |
 |-----|-------|
-| `REACT_APP_API_URL` | `https://chathdi-backend.onrender.com/api` |
+| `REACT_APP_API_URL` | `https://YOUR_USERNAME-chathdi-api.hf.space/api` |
 
-> **Ganti** dengan URL backend Render Anda dari langkah sebelumnya!
+> **Ganti** `YOUR_USERNAME` dengan username HuggingFace Anda!
 
 ### D. Deploy
 
@@ -132,22 +141,20 @@ Di bagian **"Environment Variables"**, tambahkan:
 
 ---
 
-## 🔄 Langkah 4: Update CORS di Backend
+## 🔄 Langkah 3: Update CORS di Backend
 
 Setelah frontend berhasil deploy:
 
-1. Kembali ke Render Dashboard
-2. Buka service `chathdi-backend`
-3. Pergi ke **Environment**
-4. Update `CORS_ORIGINS` dengan URL frontend Vercel:
+1. Kembali ke HuggingFace Space → **Settings** → **Repository secrets**
+2. Update `CORS_ORIGINS` dengan URL frontend Vercel:
    ```
-   https://chathdi.vercel.app,https://your-custom-domain.com
+   https://chathdi.vercel.app
    ```
-5. Render akan otomatis redeploy
+3. **Restart** Space: Settings → Factory reboot
 
 ---
 
-## ✅ Langkah 5: Verifikasi
+## ✅ Langkah 4: Verifikasi
 
 1. Buka URL frontend Vercel Anda
 2. Coba kirim pesan di chat
@@ -158,37 +165,46 @@ Setelah frontend berhasil deploy:
 ## 🐛 Troubleshooting
 
 ### Backend tidak bisa diakses
-- Periksa logs di Render Dashboard
-- Pastikan `requirements.txt` lengkap
-- Cek environment variables sudah diset
+- Periksa logs di HuggingFace Space → **Logs**
+- Pastikan semua file sudah terupload
+- Cek secrets sudah diset dengan benar
 
 ### Frontend tidak konek ke backend
 - Periksa `REACT_APP_API_URL` sudah benar
-- Pastikan `CORS_ORIGINS` di backend sudah include URL frontend
+- Pastikan `CORS_ORIGINS` di backend include URL frontend
 - Cek browser console untuk error
+
+### Space stuck di "Building"
+- Cek Dockerfile syntax
+- Pastikan `requirements.txt` valid
+- Coba "Factory reboot" di Settings
 
 ### API Key error
 - Pastikan API key valid dan aktif
-- Cek billing/quota di masing-masing provider
-
-### Render free tier sleep
-- Free tier akan sleep setelah 15 menit tidak aktif
-- Request pertama setelah sleep akan lambat (cold start ~30 detik)
-- Solusi: Upgrade ke paid plan atau gunakan uptime monitor
+- Untuk HuggingFace token, gunakan "Write" permission
 
 ---
 
-## 📁 File yang Dibuat
+## 📁 Struktur Project
 
 ```
-chathdi/
+ChatHDI-new/
 ├── backend/
-│   ├── render.yaml          # Konfigurasi Render
+│   ├── Dockerfile            # Konfigurasi Docker untuk HF Spaces
+│   ├── README.md             # Metadata HuggingFace Space
+│   ├── requirements.txt      # Python dependencies
+│   ├── server.py             # FastAPI server
+│   ├── ai_service.py         # AI chat service
+│   ├── media_service.py      # Image/video generation
+│   ├── pptx_service.py       # PowerPoint generation
+│   ├── rnd_models.py         # R&D database models
 │   └── .env.example          # Template environment
 ├── frontend/
-│   ├── vercel.json           # Konfigurasi Vercel  
-│   ├── .env.example          # Template environment
-│   └── src/config.js         # Updated untuk production
+│   ├── vercel.json           # Konfigurasi Vercel
+│   ├── package.json          # Node.js dependencies
+│   ├── src/
+│   │   └── config.js         # API URL configuration
+│   └── .env.example          # Template environment
 └── DEPLOYMENT.md             # Panduan ini
 ```
 
@@ -196,16 +212,21 @@ chathdi/
 
 ## 🔗 Links Penting
 
-- **Render Dashboard**: https://dashboard.render.com
+- **HuggingFace Spaces**: https://huggingface.co/spaces
 - **Vercel Dashboard**: https://vercel.com/dashboard
-- **Google AI Studio**: https://aistudio.google.com
-- **Hugging Face**: https://huggingface.co/settings/tokens
+- **Groq Console**: https://console.groq.com
+- **HuggingFace Tokens**: https://huggingface.co/settings/tokens
 
 ---
 
-## 💡 Tips Optimasi
+## 💡 Tips
 
-1. **Custom Domain**: Kedua platform support custom domain gratis
-2. **Monitoring**: Gunakan Render/Vercel analytics untuk monitor performa
-3. **Database**: Untuk production, gunakan MongoDB Atlas (free tier: 512MB)
-4. **Caching**: Enable caching di Vercel untuk static assets
+1. **Free Tier Limits**:
+   - HuggingFace: CPU basic gratis, bisa sleep setelah tidak aktif
+   - Vercel: 100GB bandwidth/bulan
+
+2. **Custom Domain**: Kedua platform support custom domain gratis
+
+3. **Upgrades**:
+   - HuggingFace: Upgrade ke GPU untuk response lebih cepat
+   - Vercel: Pro plan untuk fitur lebih lengkap
