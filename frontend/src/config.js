@@ -3,7 +3,8 @@
 
 const config = {
     // API URL - set REACT_APP_API_URL in environment for production
-    API_URL: process.env.REACT_APP_API_URL || 'http://localhost:8000/api',
+    // Remove trailing slash to prevent double slash issues
+    API_URL: (process.env.REACT_APP_API_URL || 'http://localhost:8000/api').replace(/\/+$/, ''),
 
     // App version
     VERSION: '2.3.0',
