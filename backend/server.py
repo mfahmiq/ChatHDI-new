@@ -25,6 +25,8 @@ load_dotenv(ROOT_DIR / '.env')
 # Import services after loading env
 from ai_service import ai_service
 from media_service import media_service
+from document_service import document_service
+from fastapi import UploadFile, File
 
 # Try to import pptx_service (may fail without all dependencies)
 try:
@@ -168,6 +170,16 @@ class PPTXRequest(BaseModel):
 
 
 # Basic routes
+@api_router.post("/upload-document")
+async def upload_document(file: UploadFile = File(...)):
+    """Upload and parse a document (PDF, DOCX, CSV, Excel, TXT)"""
+    try:
+        parsed_text = await document_service.parse_document(file)
+        return {"success": True, "filename": file.filename, "content": parsed_text}
+    except Exception as e:
+        logger.error(f"Upload document error: {e}")
+        return {"success": False, "error": str(e)}
+
 @api_router.get("/")
 async def root():
     return {"message": "ChatHDI API - Ready", "mode": "mongodb" if USE_MONGODB else "demo"}

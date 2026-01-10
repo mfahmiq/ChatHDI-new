@@ -2,6 +2,7 @@ import React from 'react';
 import { Send, Paperclip, Image, Mic, StopCircle, Globe, Sparkles, ChevronDown, Zap, Code, Eye, Brain, FolderOpen, X, FileText, File, Palette } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { aiModels } from '../data/mockData';
+import config from '../config';
 
 const ChatInput = ({
   onSend,
@@ -97,39 +98,56 @@ const ChatInput = ({
         };
         reader.readAsDataURL(file);
       } else if (type === 'file') {
-        // Handle text-based files
-        if (file.type.startsWith('text/') ||
-          file.name.endsWith('.txt') ||
-          file.name.endsWith('.md') ||
-          file.name.endsWith('.json') ||
-          file.name.endsWith('.csv') ||
-          file.name.endsWith('.py') ||
-          file.name.endsWith('.js') ||
-          file.name.endsWith('.html') ||
-          file.name.endsWith('.css')) {
-          const reader = new FileReader();
-          reader.onload = (event) => {
-            setAttachments(prev => [...prev, {
-              id: Date.now() + Math.random(),
-              type: 'file',
-              name: file.name,
-              size: file.size,
-              content: event.target.result,
-              file: file
-            }]);
-          };
-          reader.readAsText(file);
-        } else {
-          // Other files - just store reference
-          setAttachments(prev => [...prev, {
-            id: Date.now() + Math.random(),
-            type: 'file',
-            name: file.name,
-            size: file.size,
-            content: `[File biner: ${file.name}, ${formatFileSize(file.size)}]`,
-            file: file
-          }]);
+        // Upload file to backend for parsing
+        // No nested loop needed, we are already iterating 'file' from outer loop
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Add a temporary loading attachment
+        const tempId = Date.now() + Math.random();
+        setAttachments(prev => [...prev, {
+          id: tempId,
+          type: 'file',
+          name: file.name,
+          size: file.size,
+          content: 'Loading...',
+          isLoading: true,
+          file: file
+        }]);
+
+        try {
+          const response = await fetch(`${config.API_URL}/upload-document`, {
+            method: 'POST',
+            body: formData
+          });
+          const data = await response.json();
+
+          // Update attachment with actual content
+          setAttachments(prev => prev.map(att => {
+            if (att.id === tempId) {
+              return {
+                ...att,
+                content: data.success ? data.content : `[Error parsing file: ${data.error}]`,
+                isLoading: false
+              };
+            }
+            return att;
+          }));
+        } catch (error) {
+          console.error('File upload error:', error);
+          setAttachments(prev => prev.map(att => {
+            if (att.id === tempId) {
+              return {
+                ...att,
+                content: `[Error uploading file: ${error.message}]`,
+                isLoading: false
+              };
+            }
+            return att;
+          }));
         }
+
       }
     }
 
@@ -270,7 +288,7 @@ const ChatInput = ({
               ref={fileInputRef}
               type="file"
               multiple
-              accept=".txt,.md,.json,.csv,.py,.js,.html,.css,.pdf,.doc,.docx"
+              accept=".txt,.md,.json,.csv,.py,.js,.html,.css,.pdf,.doc,.docx,.xls,.xlsx"
               onChange={(e) => handleFileSelect(e, 'file')}
               className="hidden"
             />

@@ -119,7 +119,7 @@ MODEL_MAPPING = {
     "hdi-gemini-search": ("vercel-grounding", "google/gemini-2.0-flash-001", "Gemini + Google Search"),
     
     # === DIRECT APIS - Free Fallbacks ===
-    "hdi-4": ("gemini", "gemini-1.5-flash", "Gemini 1.5 Flash (Direct, Free)"),
+    "hdi-4": ("gemini", "gemini-1.5-flash-latest", "Gemini 1.5 Flash (Direct, Free)"),
     "hdi-4-mini": ("gemini", "gemini-1.5-flash", "Gemini 1.5 Flash Mini"),
     "hdi-vision": ("gemini", "gemini-1.5-flash", "Gemini Vision"),
     "hdi-code": ("gemini", "gemini-1.5-flash", "Gemini for Code"),
