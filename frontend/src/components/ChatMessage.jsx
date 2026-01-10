@@ -1,11 +1,70 @@
 import React from 'react';
-import { User, Copy, Check, RefreshCw, ThumbsUp, ThumbsDown, Share, Bookmark, MoreHorizontal, Sparkles, Download, Play, Image as ImageIcon, Film, FileText } from 'lucide-react';
+import { User, Copy, Check, RefreshCw, ThumbsUp, ThumbsDown, Share, Bookmark, MoreHorizontal, Sparkles, Download, Play, Image as ImageIcon, Film, FileText, FolderOpen } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
   const [copied, setCopied] = React.useState(false);
   const [liked, setLiked] = React.useState(null);
   const isUser = message.role === 'user';
+
+  // Extract all code blocks from message content
+  const extractAllCodeBlocks = (content) => {
+    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+    const blocks = [];
+    let match;
+
+    while ((match = codeBlockRegex.exec(content)) !== null) {
+      const language = match[1] || 'code';
+      const code = match[2];
+
+      // Try to detect filename from code comments
+      const filenameMatch = code.match(/^\/\/\s*(\S+\.\w+)|^#\s*(\S+\.\w+)|^<!--\s*(\S+\.\w+)/);
+      let filename = filenameMatch ? (filenameMatch[1] || filenameMatch[2] || filenameMatch[3]) : null;
+
+      // Generate filename based on language if not found
+      if (!filename) {
+        const langFileMap = {
+          html: 'index.html', htm: 'index.html',
+          css: 'styles.css', scss: 'styles.scss',
+          javascript: 'app.js', js: 'app.js',
+          jsx: 'App.jsx', tsx: 'App.tsx',
+          typescript: 'index.ts', ts: 'index.ts',
+          python: 'main.py', py: 'main.py',
+          json: 'data.json', sql: 'query.sql',
+          bash: 'script.sh', sh: 'script.sh'
+        };
+        const baseName = langFileMap[language.toLowerCase()] || `code-${blocks.length + 1}.txt`;
+        filename = baseName;
+      }
+
+      blocks.push({
+        language,
+        code,
+        filename
+      });
+    }
+
+    return blocks;
+  };
+
+  // Get all code blocks in this message
+  const allCodeBlocks = React.useMemo(() => {
+    if (!message.content) return [];
+    return extractAllCodeBlocks(message.content);
+  }, [message.content]);
+
+  // Handle opening all code blocks in Canvas
+  const handleOpenAllInCanvas = () => {
+    if (allCodeBlocks.length === 0 || !onOpenCanvas) return;
+
+    // Create combined content with file markers
+    const combinedCode = allCodeBlocks.map(block =>
+      `// filename: ${block.filename}\n${block.code}`
+    ).join('\n\n');
+
+    // Send to Canvas with first language as reference
+    onOpenCanvas(combinedCode, allCodeBlocks[0].language);
+  };
 
   const handleCopy = async () => {
     try {
@@ -19,7 +78,7 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
 
   const handleDownloadMedia = (base64Data, mediaType, index) => {
     let mimeType, extension, filename;
-    
+
     if (mediaType === 'image') {
       mimeType = 'image/png';
       extension = 'png';
@@ -33,7 +92,7 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
       extension = 'pptx';
       filename = message.filename || `ChatHDI_Presentation_${Date.now()}.pptx`;
     }
-    
+
     const link = document.createElement('a');
     link.href = `data:${mimeType};base64,${base64Data}`;
     link.download = filename;
@@ -53,7 +112,7 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
           <div key={index} className="relative group/media">
             {message.mediaType === 'image' ? (
               <div className="relative rounded-xl overflow-hidden border border-[#2f2f2f] max-w-lg">
-                <img 
+                <img
                   src={`data:image/png;base64,${data}`}
                   alt={`Generated image ${index + 1}`}
                   className="w-full h-auto"
@@ -93,7 +152,7 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
               </div>
             ) : (
               <div className="relative rounded-xl overflow-hidden border border-[#2f2f2f] max-w-lg">
-                <video 
+                <video
                   src={`data:video/mp4;base64,${data}`}
                   controls
                   className="w-full h-auto"
@@ -121,13 +180,13 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
 
   const renderContent = (content) => {
     const parts = content.split(/(```[\s\S]*?```)/);
-    
+
     return parts.map((part, index) => {
       if (part.startsWith('```')) {
         const lines = part.slice(3, -3).split('\n');
         const language = lines[0] || 'code';
         const code = lines.slice(1).join('\n');
-        
+
         return (
           <div key={index} className="my-4 rounded-xl overflow-hidden bg-[#0d0d0d] border border-[#2f2f2f]">
             <div className="flex items-center justify-between px-4 py-2.5 bg-[#1a1a1a] border-b border-[#2f2f2f]">
@@ -161,7 +220,7 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
           {part.split('\n').map((line, lineIndex) => {
             let processedLine = line.replace(/\*\*(.+?)\*\*/g, '<strong class="text-white">$1</strong>');
             processedLine = processedLine.replace(/`([^`]+)`/g, '<code class="bg-[#2f2f2f] text-emerald-400 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>');
-            
+
             if (line.startsWith('- ') || line.startsWith('• ')) {
               return (
                 <div key={lineIndex} className="flex gap-2 my-1 ml-2">
@@ -170,7 +229,7 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
                 </div>
               );
             }
-            
+
             const numberedMatch = line.match(/^(\d+)\.\s/);
             if (numberedMatch) {
               return (
@@ -191,8 +250,8 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
             }
 
             return (
-              <p 
-                key={lineIndex} 
+              <p
+                key={lineIndex}
                 className={line.trim() === '' ? 'h-3' : 'leading-relaxed'}
                 dangerouslySetInnerHTML={{ __html: processedLine }}
               />
@@ -213,8 +272,8 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
           {/* Avatar */}
           <div className={cn(
             'shrink-0 w-9 h-9 rounded-xl flex items-center justify-center shadow-lg',
-            isUser 
-              ? 'bg-gradient-to-br from-purple-500 to-pink-500' 
+            isUser
+              ? 'bg-gradient-to-br from-purple-500 to-pink-500'
               : 'bg-gradient-to-br from-emerald-500 to-cyan-500'
           )}>
             {isUser ? (
@@ -243,7 +302,7 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
                 {message.attachments.map((att, idx) => (
                   <div key={idx} className="relative">
                     {att.type === 'image' ? (
-                      <img 
+                      <img
                         src={att.preview}
                         alt={att.name}
                         className="max-w-xs max-h-48 rounded-lg border border-[#2f2f2f]"
@@ -262,6 +321,22 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
             <div className="text-gray-300 leading-relaxed">
               {renderContent(message.content)}
             </div>
+
+            {/* Open All in Canvas button - appears when there are multiple code blocks */}
+            {!isUser && allCodeBlocks.length > 1 && (
+              <div className="mt-4 flex items-center gap-2">
+                <button
+                  onClick={handleOpenAllInCanvas}
+                  className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-500/30 rounded-lg text-purple-400 text-sm font-medium transition-colors"
+                >
+                  <FolderOpen className="h-4 w-4" />
+                  Open All {allCodeBlocks.length} Files in Canvas
+                </button>
+                <span className="text-xs text-gray-500">
+                  {allCodeBlocks.map(b => b.filename).join(', ')}
+                </span>
+              </div>
+            )}
 
             {/* Render generated media */}
             {renderMedia()}

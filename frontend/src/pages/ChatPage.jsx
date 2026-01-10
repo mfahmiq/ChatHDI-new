@@ -87,7 +87,7 @@ const ChatPage = () => {
     ));
   };
 
-  const handleSendMessage = async (content, attachments = []) => {
+  const handleSendMessage = async (content, attachments = [], modelOverride = null) => {
     const userMessage = {
       id: `msg-${Date.now()}`,
       role: 'user',
@@ -108,7 +108,7 @@ const ChatPage = () => {
       };
       setConversations(prev => [newConv, ...prev]);
       setActiveConversation(newConv);
-      await getAIResponse(newConv, userMessage);
+      await getAIResponse(newConv, userMessage, modelOverride);
     } else {
       const updatedConv = {
         ...activeConversation,
@@ -119,11 +119,11 @@ const ChatPage = () => {
       setConversations(prev => prev.map(c =>
         c.id === activeConversation.id ? updatedConv : c
       ));
-      await getAIResponse(updatedConv, userMessage);
+      await getAIResponse(updatedConv, userMessage, modelOverride);
     }
   };
 
-  const getAIResponse = async (conv, userMessage) => {
+  const getAIResponse = async (conv, userMessage, modelOverride = null) => {
     setIsLoading(true);
 
     try {
@@ -180,7 +180,7 @@ const ChatPage = () => {
         },
         body: JSON.stringify({
           messages: apiMessages,
-          model: selectedModel
+          model: modelOverride || selectedModel
         })
       });
 
@@ -247,7 +247,12 @@ const ChatPage = () => {
   };
 
   const handleStopGeneration = () => setIsLoading(false);
-  const handleSuggestionClick = (prompt) => handleSendMessage(prompt);
+
+  const handleSuggestionClick = (prompt) => {
+    const targetModel = 'hdi-grok'; // Groq Llama 70B
+    setSelectedModel(targetModel);
+    handleSendMessage(prompt, [], targetModel);
+  };
 
   // Handle feature button clicks
   const handleFeatureClick = (feature) => {

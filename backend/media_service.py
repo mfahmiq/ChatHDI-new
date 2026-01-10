@@ -11,6 +11,7 @@ import io
 import logging
 from pathlib import Path
 from typing import Optional, Tuple, Dict
+import httpx
 
 # Load environment variables first
 from dotenv import load_dotenv
@@ -61,10 +62,11 @@ HF_IMAGE_MODELS = {
 
 # Hugging Face Models for video generation
 HF_VIDEO_MODELS = {
-    "text-to-video": "ali-vilab/text-to-video-ms-1.7b",
-    "default": "ali-vilab/text-to-video-ms-1.7b",
+    "text-to-video": "cerspense/zeroscope_v2_576w",
+    "default": "cerspense/zeroscope_v2_576w",
     # Frontend model IDs (from dropdown)
-    "hdi-video": "ali-vilab/text-to-video-ms-1.7b"
+    "hdi-video": "cerspense/zeroscope_v2_576w",
+    "ali-vilab": "ali-vilab/text-to-video-ms-1.7b" # Keep as backup/reference
 }
 
 
@@ -299,7 +301,8 @@ class MediaService:
         video_keywords = [
             'buatkan video', 'buat video', 'generate video', 'create video',
             'animasi', 'animation', 'video tentang', 'rekam', 'buat animasi',
-            'visualisasi video', 'video ilustrasi'
+            'visualisasi video', 'video ilustrasi', 'make a video', 'make video',
+            'video of', 'create a video'
         ]
         
         # Check for video first (more specific)
@@ -453,6 +456,9 @@ class MediaService:
         """
         Generate video using HuggingFace Inference API
         
+        NOTE: As of Jan 2025, free Text-to-Video models are no longer available
+        on the Hugging Face Serverless Inference API.
+        
         Args:
             prompt: Text prompt for video generation
             model: Model alias or full model name
@@ -460,47 +466,23 @@ class MediaService:
         Returns:
             dict with 'success', 'video_base64', 'error'
         """
-        if not self.hf_client:
-            return {
-                'success': False,
-                'video_base64': None,
-                'model': model,
-                'error': 'Hugging Face client not available. Please set HUGGINGFACE_API_KEY in .env'
-            }
-        
-        try:
-            # Get full model name from alias
-            model_name = HF_VIDEO_MODELS.get(model, HF_VIDEO_MODELS['default'])
-            
-            logger.info(f"Generating video with HuggingFace model: {model_name}")
-            logger.info(f"Prompt: {prompt[:100]}...")
-            
-            # Generate video using HuggingFace
-            video_bytes = self.hf_client.text_to_video(
-                prompt=prompt,
-                model=model_name
-            )
-            
-            # Convert to base64
-            video_base64 = base64.b64encode(video_bytes).decode('utf-8')
-            
-            logger.info("Video generated successfully with HuggingFace")
-            
-            return {
-                'success': True,
-                'video_base64': video_base64,
-                'model': model_name,
-                'error': None
-            }
-            
-        except Exception as e:
-            logger.error(f"HuggingFace video generation error: {e}")
-            return {
-                'success': False,
-                'video_base64': None,
-                'model': model,
-                'error': str(e)
-            }
+        # Text-to-Video is not available on free Hugging Face Inference API
+        # The models (ali-vilab, zeroscope, etc.) are no longer hosted serverlessly
+        return {
+            'success': False,
+            'video_base64': None,
+            'model': model,
+            'error': """🚧 **Fitur Video Sedang Tidak Tersedia**
+
+Hugging Face **tidak lagi menyediakan** layanan Text-to-Video gratis secara serverless (sejak awal 2026).
+
+**Alternatif yang bisa dipertimbangkan:**
+1. **Replicate.com** - Menyediakan API video generation (berbayar per penggunaan)
+2. **Fal.ai** - API cepat untuk video generation
+3. **Self-hosting** - Jalankan model seperti Zeroscope di GPU sendiri
+
+*Untuk saat ini, silakan gunakan fitur **HDI Image** untuk visualisasi.*"""
+        }
     
     def get_master_prompts(self) -> Dict:
         """Return all master prompt templates"""

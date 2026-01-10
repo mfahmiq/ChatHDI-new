@@ -141,17 +141,31 @@ export const mockConversations = [
 ];
 
 export const aiModels = [
-  { id: 'hdi-4', name: 'HDI-4', description: 'Model terkuat untuk tugas kompleks', icon: '⚡' },
-  { id: 'hdi-4-mini', name: 'HDI-4 Mini', description: 'Cepat dan efisien', icon: '🚀' },
-  { id: 'hdi-grok', name: 'Groq Llama', description: 'Llama 3.3 70B via Groq (super cepat)', icon: '🌌' },
-  { id: 'hdi-grok-mini', name: 'Groq Mini', description: 'Llama 3.1 8B via Groq (instant)', icon: '🌠' },
-  { id: 'hdi-vision', name: 'HDI Vision', description: 'Analisis gambar dan visual', icon: '👁️' },
-  { id: 'hdi-code', name: 'HDI Code', description: 'Spesialis coding', icon: '💻' },
-  // Hugging Face Image Generation Models
-  { id: 'hdi-image', name: 'HDI Image', description: 'Generate gambar dengan AI (Gratis)', icon: '🎨', category: 'image' },
-  { id: 'hdi-image-flux', name: 'HDI Image Flux', description: 'Model terbaru FLUX.1 (Gratis)', icon: '✨', category: 'image' },
-  // Hugging Face Video Generation Models
-  { id: 'hdi-video', name: 'HDI Video', description: 'Generate video dengan AI (Gratis, Lambat)', icon: '🎬', category: 'video' }
+  // === AIML API - Top Models (FREE 50k credits) ===
+  // { id: 'hdi-gpt4o', name: 'GPT-4o', description: 'OpenAI terkuat via AIML (Gratis)', icon: '🧠', category: 'chat', badge: '🆓 Free' },
+  // { id: 'hdi-gpt4o-mini', name: 'GPT-4o Mini', description: 'OpenAI cepat via AIML (Gratis)', icon: '⚡', category: 'chat', badge: '🆓 Free' },
+  // { id: 'hdi-claude', name: 'Claude 3.7 Sonnet', description: 'Anthropic coding via AIML (Gratis)', icon: '🤖', category: 'chat', badge: '💻 Code' },
+  // { id: 'hdi-claude-haiku', name: 'Claude 3.5 Haiku', description: 'Claude cepat & murah (Gratis)', icon: '🐇', category: 'chat' },
+  // { id: 'hdi-llama', name: 'Llama 3.3 70B', description: 'Meta Llama via AIML (Gratis)', icon: '🦙', category: 'chat' },
+  // { id: 'hdi-gemma', name: 'Gemma 3 27B', description: 'Google open source (Gratis)', icon: '💎', category: 'chat' },
+
+  // === GROQ - Ultra Fast (FREE) ===
+  { id: 'hdi-grok', name: 'Groq Llama 70B', description: 'Super cepat via Groq (Gratis)', icon: '🌌', category: 'chat', badge: '⚡ Fast' },
+  { id: 'hdi-grok-mini', name: 'Groq Llama 8B', description: 'Instant via Groq (Gratis)', icon: '🌠', category: 'chat' },
+
+  // === DIRECT GEMINI (FREE) === [DISABLED]
+  // { id: 'hdi-4', name: 'Gemini 1.5 Flash', description: 'Google direct API (Gratis)', icon: '💫', category: 'chat' },
+  // { id: 'hdi-vision', name: 'Gemini Vision', description: 'Analisis gambar (Gratis)', icon: '👁️', category: 'chat' },
+  // { id: 'hdi-code', name: 'Gemini Code', description: 'Spesialis coding (Gratis)', icon: '💻', category: 'chat' },
+
+  // === VERCEL (Requires Credit Card) ===
+  // { id: 'hdi-gemini', name: 'Gemini 2.0 Flash', description: 'Via Vercel (perlu kartu)', icon: '✨', category: 'chat', badge: '💳' },
+  // { id: 'hdi-gemini-search', name: 'Gemini + Search', description: 'Google Search (perlu kartu)', icon: '🔍', category: 'chat', badge: '💳' },
+
+  // === IMAGE & VIDEO (FREE) ===
+  { id: 'hdi-image', name: 'HDI Image', description: 'Generate gambar (Gratis)', icon: '🎨', category: 'image' },
+  { id: 'hdi-image-flux', name: 'FLUX.1', description: 'Model terbaru (Gratis)', icon: '✨', category: 'image' },
+  // { id: 'hdi-video', name: 'HDI Video', description: 'Generate video (Gratis)', icon: '🎬', category: 'video' } [DISABLED]
 ];
 
 export const generateMockResponse = (userMessage) => {

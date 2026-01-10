@@ -118,6 +118,15 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+# CORS middleware - allow all origins for development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
@@ -234,6 +243,14 @@ async def chat(request: ChatRequest):
         # Check if user is requesting media generation
         media_type, media_prompt = media_service.detect_media_request(last_message)
         
+        # Override detection if specific media model is selected
+        if request.model == 'hdi-image' or request.model == 'hdi-image-flux':
+            media_type = 'image'
+            media_prompt = last_message
+        elif request.model == 'hdi-video':
+            media_type = 'video'
+            media_prompt = last_message
+        
         if media_type == 'image':
             # Generate image
             result = await media_service.generate_image(media_prompt)
@@ -264,9 +281,10 @@ async def chat(request: ChatRequest):
                 )
             else:
                 # Fallback to text response
-                response = await ai_service.chat(messages, request.model)
+                # response = await ai_service.chat(messages, request.model)
                 return ChatResponse(
-                    response=f"Maaf, gagal membuat video: {result['error']}\n\nSebagai gantinya, berikut penjelasan:\n\n{response}",
+                    # response=f"Maaf, gagal membuat video: {result['error']}\n\nSebagai gantinya, berikut penjelasan:\n\n{response}",
+                    response=f"❌ **Gagal Membuat Video**\n\nDetail Error:\n`{result['error']}`\n\nSilakan coba lagi atau cek konfigurasi API.",
                     model=request.model
                 )
         
@@ -406,11 +424,3 @@ async def get_master_prompts():
 
 # Include the router in the main app
 app.include_router(api_router)
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_credentials=True,
-    allow_origins=os.environ.get('CORS_ORIGINS', '*').split(','),
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
