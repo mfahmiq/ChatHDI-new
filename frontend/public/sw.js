@@ -1,4 +1,4 @@
-const CACHE_NAME = 'chathdi-v1';
+const CACHE_NAME = 'chathdi-v2';
 const urlsToCache = [
   '/',
   '/index.html',

@@ -436,7 +436,7 @@ const UpdateVersionModal = ({ onClose }) => {
                   <p className="text-xs text-gray-400">Versi {latestVersion} sudah dirilis</p>
                 </div>
               </div>
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 rounded-xl text-white font-medium transition-colors">
+              <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#2f2f2f] hover:bg-[#3f3f3f] rounded-xl text-white font-medium transition-colors border border-gray-700">
                 <Download className="h-5 w-5" />
                 Update Sekarang
               </button>
