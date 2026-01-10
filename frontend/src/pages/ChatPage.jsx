@@ -16,7 +16,7 @@ const ChatPage = () => {
   const [activeProject, setActiveProject] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = React.useState(false);
-  const [selectedModel, setSelectedModel] = React.useState('hdi-4');
+  const [selectedModel, setSelectedModel] = React.useState('hdi-grok');
   const [canvasOpen, setCanvasOpen] = React.useState(false);
   const [canvasCode, setCanvasCode] = React.useState('');
   const [canvasLanguage, setCanvasLanguage] = React.useState('');

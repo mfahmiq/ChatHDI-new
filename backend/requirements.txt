@@ -21,4 +21,10 @@ Pillow>=10.0.0
 
 # Utilities
 aiohttp>=3.9.0
-requests>=2.31.0
+
+# Document Processing
+PyPDF2>=3.0.0
+python-docx>=1.0.0
+openpyxl>=3.1.0
+pandas>=2.1.0
+
