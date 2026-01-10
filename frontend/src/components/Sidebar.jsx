@@ -150,7 +150,7 @@ const Sidebar = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 flex items-center justify-center">
-                <img src="/logo-hdi.png" alt="Logo" className="w-full h-full object-contain" />
+                <img src="/icons/logo-hdi.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <span className="font-semibold text-white">ChatHDI</span>
             </div>
@@ -408,7 +408,7 @@ const UpdateVersionModal = ({ onClose }) => {
           </button>
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 flex items-center justify-center shadow-lg shadow-emerald-500/10 border border-emerald-500/20 p-2">
-              <img src="/logo-hdi.png" alt="Logo" className="w-full h-full object-contain" />
+              <img src="/icons/logo-hdi.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">ChatHDI Update</h2>
