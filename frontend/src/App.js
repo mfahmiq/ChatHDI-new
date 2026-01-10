@@ -3,6 +3,7 @@ import './App.css';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ChatPage from './pages/ChatPage';
 import DownloadPage from './pages/DownloadPage';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 
 function App() {
   return (
@@ -15,6 +16,7 @@ function App() {
           <Route path="/download" element={<DownloadPage />} />
           <Route path="/install" element={<DownloadPage />} />
         </Routes>
+        <PWAInstallPrompt />
       </BrowserRouter>
     </div>
   );
