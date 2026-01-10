@@ -50,9 +50,13 @@ const WelcomeScreen = ({ onSuggestionClick, onFeatureClick }) => {
     <div className="flex-1 flex flex-col items-center justify-center px-4 py-8">
       {/* Animated Logo */}
       <div className="relative mb-8">
-        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-3xl blur-2xl opacity-30 animate-pulse" />
-        <div className="relative w-20 h-20 rounded-3xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shadow-2xl shadow-emerald-500/30">
-          <span className="text-white font-bold text-3xl">H</span>
+        <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full blur-2xl opacity-20 animate-pulse" />
+        <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 flex items-center justify-center p-4 border border-emerald-500/20 shadow-2xl shadow-emerald-500/10">
+          <img
+            src="/logo-hdi.png"
+            alt="ChatHDI Logo"
+            className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+          />
         </div>
       </div>
 

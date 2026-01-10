@@ -1,17 +1,17 @@
 import React from 'react';
-import { 
-  Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, Menu, X, 
+import {
+  Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, Menu, X,
   FolderOpen, Folder, ChevronDown, ChevronRight, Pin, Search,
   Settings, Star, Archive, FolderPlus, Hash, Sparkles, Download,
   CheckCircle, Clock, Zap, ArrowRight
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-const Sidebar = ({ 
+const Sidebar = ({
   projects,
-  conversations, 
-  activeConversation, 
-  onSelectConversation, 
+  conversations,
+  activeConversation,
+  onSelectConversation,
   onNewChat,
   onDeleteConversation,
   onRenameConversation,
@@ -32,8 +32,8 @@ const Sidebar = ({
   const [showUpdateModal, setShowUpdateModal] = React.useState(false);
 
   const toggleProject = (projectId) => {
-    setExpandedProjects(prev => 
-      prev.includes(projectId) 
+    setExpandedProjects(prev =>
+      prev.includes(projectId)
         ? prev.filter(id => id !== projectId)
         : [...prev, projectId]
     );
@@ -55,7 +55,7 @@ const Sidebar = ({
   );
 
   const pinnedConversations = filteredConversations.filter(c => c.isPinned);
-  const projectConversations = (projectId) => 
+  const projectConversations = (projectId) =>
     filteredConversations.filter(c => c.projectId === projectId && !c.isPinned);
   const unorganizedConversations = filteredConversations.filter(c => !c.projectId && !c.isPinned);
 
@@ -86,7 +86,7 @@ const Sidebar = ({
       }}
     >
       <MessageSquare className="h-4 w-4 shrink-0 text-gray-500" />
-      
+
       {editingId === conv.id ? (
         <input
           type="text"
@@ -149,8 +149,8 @@ const Sidebar = ({
         <div className="p-3 space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center">
-                <span className="text-white font-bold text-sm">H</span>
+              <div className="w-8 h-8 flex items-center justify-center">
+                <img src="/logo-hdi.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <span className="font-semibold text-white">ChatHDI</span>
             </div>
@@ -166,14 +166,14 @@ const Sidebar = ({
             <Plus className="h-4 w-4" />
             Chat Baru
           </button>
-          
+
           {activeProject && (
             <div className="flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-xs text-emerald-400">
               <Folder className="h-3.5 w-3.5" />
               <span className="truncate">
                 Chat baru di: {projects.find(p => p.id === activeProject)?.name}
               </span>
-              <button 
+              <button
                 onClick={() => onSelectProject(null)}
                 className="ml-auto hover:text-white"
               >
@@ -254,7 +254,7 @@ const Sidebar = ({
                     onClick={() => toggleProject(project.id)}
                     className="p-2 text-gray-400 hover:text-white"
                   >
-                    {expandedProjects.includes(project.id) 
+                    {expandedProjects.includes(project.id)
                       ? <ChevronDown className="h-4 w-4" />
                       : <ChevronRight className="h-4 w-4" />
                     }
@@ -280,7 +280,7 @@ const Sidebar = ({
                     </span>
                   </button>
                 </div>
-                
+
                 {expandedProjects.includes(project.id) && (
                   <div className="mt-1 space-y-0.5">
                     {projectConversations(project.id).length === 0 ? (
@@ -320,7 +320,7 @@ const Sidebar = ({
               <div className="text-sm text-white font-medium">User Pro</div>
               <div className="text-xs text-emerald-500">HDI-4 Active</div>
             </div>
-            <button 
+            <button
               onClick={() => setShowUpdateModal(true)}
               className="p-1 rounded-lg hover:bg-[#3a3a3a] transition-colors"
             >
@@ -394,21 +394,21 @@ const UpdateVersionModal = ({ onClose }) => {
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
-      <div 
+      <div
         className="bg-[#1a1a1a] rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden border border-[#2f2f2f] shadow-2xl"
         onClick={e => e.stopPropagation()}
       >
         {/* Header */}
         <div className="relative px-6 py-5 border-b border-[#2f2f2f] bg-gradient-to-r from-emerald-500/10 to-cyan-500/10">
-          <button 
+          <button
             onClick={onClose}
             className="absolute right-4 top-4 p-1.5 hover:bg-[#2f2f2f] rounded-lg text-gray-400 hover:text-white"
           >
             <X className="h-5 w-5" />
           </button>
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-              <span className="text-white font-bold text-2xl">H</span>
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 flex items-center justify-center shadow-lg shadow-emerald-500/10 border border-emerald-500/20 p-2">
+              <img src="/logo-hdi.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <h2 className="text-xl font-bold text-white">ChatHDI Update</h2>
@@ -452,7 +452,7 @@ const UpdateVersionModal = ({ onClose }) => {
           </h3>
           <div className="space-y-4">
             {updateHistory.map((release, index) => (
-              <div 
+              <div
                 key={release.version}
                 className={cn(
                   "relative pl-6 pb-4",
@@ -462,11 +462,11 @@ const UpdateVersionModal = ({ onClose }) => {
                 {/* Timeline dot */}
                 <div className={cn(
                   "absolute left-0 top-0 w-3 h-3 rounded-full -translate-x-1.5",
-                  release.isLatest 
-                    ? "bg-emerald-500 ring-4 ring-emerald-500/20" 
+                  release.isLatest
+                    ? "bg-emerald-500 ring-4 ring-emerald-500/20"
                     : "bg-[#3a3a3a]"
                 )} />
-                
+
                 {/* Version info */}
                 <div className="flex items-center gap-2 mb-2">
                   <span className={cn(
@@ -482,7 +482,7 @@ const UpdateVersionModal = ({ onClose }) => {
                   )}
                   <span className="text-xs text-gray-500">{release.date}</span>
                 </div>
-                
+
                 {/* Changes */}
                 <ul className="space-y-1">
                   {release.changes.map((change, i) => (

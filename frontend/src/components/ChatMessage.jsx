@@ -279,7 +279,7 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
             {isUser ? (
               <User className="h-5 w-5 text-white" />
             ) : (
-              <span className="text-white font-bold text-sm">H</span>
+              <img src="/logo-hdi.png" alt="HDI" className="h-6 w-6 object-contain" />
             )}
           </div>
 

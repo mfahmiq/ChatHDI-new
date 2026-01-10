@@ -47,8 +47,8 @@ const PWAInstallPrompt = () => {
 
     return (
         <div className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-[#2f2f2f] border border-[#424242] p-4 rounded-xl shadow-2xl z-50 flex items-start gap-4 animate-in slide-in-from-bottom-5 fade-in duration-300">
-            <div className="p-3 bg-emerald-500/20 rounded-lg shrink-0">
-                <Download className="h-6 w-6 text-emerald-500" />
+            <div className="p-2 bg-emerald-500/10 rounded-lg shrink-0 border border-emerald-500/20">
+                <img src="/logo-hdi.png" alt="App Logo" className="w-8 h-8 object-contain" />
             </div>
             <div className="flex-1">
                 <h3 className="font-semibold text-white mb-1">Install ChatHDI</h3>
