@@ -394,8 +394,8 @@ const ChatPage = () => {
               {isLoading && (
                 <div className="py-6 bg-[#171717]">
                   <div className="max-w-4xl mx-auto px-4 md:px-8 flex gap-4">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-500 to-cyan-500 flex items-center justify-center shadow-lg">
-                      <span className="text-white font-bold text-sm">H</span>
+                    <div className="w-9 h-9 flex items-center justify-center">
+                      <img src="/icons/logo-hdi.png" alt="HDI" className="w-full h-full object-contain" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
