@@ -27,6 +27,17 @@
             "dest": "/manifest.json"
         },
         {
+            "src": "/sw.js",
+            "dest": "/sw.js",
+            "headers": {
+                "Cache-Control": "public, max-age=0, must-revalidate"
+            }
+        },
+        {
+            "src": "/icons/(.*)",
+            "dest": "/icons/$1"
+        },
+        {
             "src": "/(.*)",
             "dest": "/index.html"
         }
