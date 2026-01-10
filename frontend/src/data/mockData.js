@@ -150,8 +150,8 @@ export const aiModels = [
   // { id: 'hdi-gemma', name: 'Gemma 3 27B', description: 'Google open source (Gratis)', icon: '💎', category: 'chat' },
 
   // === GROQ - Ultra Fast (FREE) ===
-  { id: 'hdi-grok', name: 'Groq Llama 70B', description: 'Super cepat via Groq (Gratis)', icon: '🌌', category: 'chat', badge: '⚡ Fast' },
-  { id: 'hdi-grok-mini', name: 'Groq Llama 8B', description: 'Instant via Groq (Gratis)', icon: '🌠', category: 'chat' },
+  { id: 'hdi-grok', name: 'Groq Llama 70B', description: 'Super cepat via Groq', icon: '🌌', category: 'chat', badge: '⚡ Fast' },
+  { id: 'hdi-grok-mini', name: 'Groq Llama 8B', description: 'Instant via Groq', icon: '🌠', category: 'chat' },
 
   // === DIRECT GEMINI (FREE) === [DISABLED]
   // { id: 'hdi-4', name: 'Gemini 1.5 Flash', description: 'Google direct API (Gratis)', icon: '💫', category: 'chat' },
@@ -163,8 +163,8 @@ export const aiModels = [
   // { id: 'hdi-gemini-search', name: 'Gemini + Search', description: 'Google Search (perlu kartu)', icon: '🔍', category: 'chat', badge: '💳' },
 
   // === IMAGE & VIDEO (FREE) ===
-  { id: 'hdi-image', name: 'HDI Image', description: 'Generate gambar (Gratis)', icon: '🎨', category: 'image' },
-  { id: 'hdi-image-flux', name: 'FLUX.1', description: 'Model terbaru (Gratis)', icon: '✨', category: 'image' },
+  { id: 'hdi-image', name: 'HDI Image', description: 'Generate gambar ', icon: '🎨', category: 'image' },
+  { id: 'hdi-image-flux', name: 'FLUX.1', description: 'Model terbaru ', icon: '✨', category: 'image' },
   // { id: 'hdi-video', name: 'HDI Video', description: 'Generate video (Gratis)', icon: '🎬', category: 'video' } [DISABLED]
 ];
 
