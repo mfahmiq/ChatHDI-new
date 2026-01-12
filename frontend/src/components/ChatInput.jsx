@@ -364,16 +364,16 @@ const ChatInput = ({
               ) : (
                 <button
                   type="submit"
-                  disabled={!message.trim() && attachments.length === 0}
+                  disabled={(!message.trim() && attachments.length === 0) || attachments.some(a => a.isLoading)}
                   className={cn(
                     'p-2.5 rounded-xl transition-all duration-200',
-                    (message.trim() || attachments.length > 0)
+                    ((message.trim() || attachments.length > 0) && !attachments.some(a => a.isLoading))
                       ? 'bg-gradient-to-r from-emerald-500 to-cyan-500 text-white hover:shadow-lg hover:shadow-emerald-500/30'
                       : 'bg-[#424242] text-gray-500 cursor-not-allowed'
                   )}
-                  title="Kirim pesan"
+                  title={attachments.some(a => a.isLoading) ? "Tunggu upload selesai..." : "Kirim pesan"}
                 >
-                  <Send className="h-5 w-5" />
+                  <Send className={cn("h-5 w-5", attachments.some(a => a.isLoading) && "animate-pulse")} />
                 </button>
               )}
             </div>
