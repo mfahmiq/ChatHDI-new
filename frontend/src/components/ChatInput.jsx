@@ -43,7 +43,7 @@ const ChatInput = ({
           if (att.type === 'image') {
             return `[Gambar: ${att.name}]`;
           } else {
-            return `[File: ${att.name}]\n${att.content || ''}`;
+            return `[File: ${att.name}]`;
           }
         }).join('\n');
 

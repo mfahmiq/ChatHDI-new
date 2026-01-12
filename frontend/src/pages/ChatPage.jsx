@@ -128,10 +128,26 @@ const ChatPage = () => {
 
     try {
       // Prepare messages for API
-      const apiMessages = conv.messages.map(msg => ({
-        role: msg.role,
-        content: msg.content
-      }));
+      const apiMessages = conv.messages.map(msg => {
+        let content = msg.content;
+
+        // Append attachment content for API context if present
+        if (msg.attachments && msg.attachments.length > 0) {
+          const attachmentsContent = msg.attachments
+            .filter(att => att.type === 'file' && att.content)
+            .map(att => `\n\n--- Content of ${att.name} ---\n${att.content}\n--- End of ${att.name} ---`)
+            .join('');
+
+          if (attachmentsContent) {
+            content += attachmentsContent;
+          }
+        }
+
+        return {
+          role: msg.role,
+          content: content
+        };
+      });
 
       const lastMessage = apiMessages[apiMessages.length - 1]?.content || '';
 
