@@ -46,6 +46,18 @@ const webpackConfig = {
     alias: {
       '@': path.resolve(__dirname, 'src'),
       "process/browser": "process/browser.js",
+      "node:fs": false,
+      "node:path": false,
+      "node:os": false,
+      "node:crypto": false,
+      "node:stream": false,
+      "node:http": false,
+      "node:https": false,
+      "node:zlib": false,
+      "node:url": false,
+      "node:buffer": false,
+      "node:util": false,
+      "node:process": false,
     },
     configure: (webpackConfig) => {
 
