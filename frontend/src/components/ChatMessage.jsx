@@ -2,7 +2,7 @@ import React from 'react';
 import { User, Copy, Check, RefreshCw, ThumbsUp, ThumbsDown, Share, Bookmark, MoreHorizontal, Sparkles, Download, Play, Image as ImageIcon, Film, FileText, FolderOpen, StopCircle, Table } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas, onGeneratePPT, onExport, onBookmark }) => {
+const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas, onGeneratePPT, onExport, onBookmark, autoSpeak, onSpeakEnd }) => {
   const [copied, setCopied] = React.useState(false);
   const [liked, setLiked] = React.useState(null);
   const [isSpeaking, setIsSpeaking] = React.useState(false);
