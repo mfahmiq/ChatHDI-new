@@ -101,7 +101,7 @@ const webpackConfig = {
         new webpack.NormalModuleReplacementPlugin(
           /^node:/,
           (resource) => {
-            resource.request = resource.request.replace(/^node:/, "");
+            resource.request = path.resolve(__dirname, 'src/utils/empty.js');
           }
         ),
       ];
