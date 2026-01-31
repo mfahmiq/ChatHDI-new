@@ -99,9 +99,10 @@ const webpackConfig = {
           Buffer: ["buffer", "Buffer"],
         }),
         new webpack.NormalModuleReplacementPlugin(
-          /^node:/,
+          (/^node:/),
           (resource) => {
-            resource.request = resource.request.replace(/^node:/, "");
+            const mod = resource.request.replace(/^node:/, "");
+            resource.request = mod;
           }
         ),
       ];
