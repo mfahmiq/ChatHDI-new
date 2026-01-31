@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Menu, Shield, PanelRightOpen, PanelRightClose, Sparkles, BookOpen, Presentation, FileText, Share2, Database } from 'lucide-react';
+import { Menu, Shield, PanelRightOpen, PanelRightClose, Sparkles, BookOpen, Presentation, FileText, Share2, Database, Headset } from 'lucide-react';
 import Sidebar from '../components/Sidebar';
 import ChatMessage from '../components/ChatMessage';
 import ChatInput from '../components/ChatInput';
@@ -45,6 +45,11 @@ const ChatPage = () => {
   const [exportContent, setExportContent] = React.useState('');
   const [promptModalOpen, setPromptModalOpen] = React.useState(false);
   const [inputMessage, setInputMessage] = React.useState(''); // Lift state up for ChatInput
+
+  // Realtime Conversation Mode State
+  const [isConversationMode, setIsConversationMode] = React.useState(false);
+  const [conversationStep, setConversationStep] = React.useState('idle'); // idle, listening, processing, speaking
+
   const messagesEndRef = React.useRef(null);
 
   // Load data from Supabase
@@ -402,6 +407,11 @@ const ChatPage = () => {
         c.id === conv.id ? updatedConv : c
       ));
       saveConversationToBackend(updatedConv);
+
+      // If we are in voice mode, trigger speaking
+      if (isConversationMode) {
+        setConversationStep('speaking');
+      }
     } catch (error) {
       console.error('API Error:', error);
       const aiMessage = {
@@ -426,6 +436,10 @@ const ChatPage = () => {
   };
 
   const handleSendMessage = async (content, attachments = [], modelOverride = null) => {
+    // If in conversation mode, transition to processing
+    if (isConversationMode) {
+      setConversationStep('processing');
+    }
     const userMessage = {
       id: `msg-${Date.now()}`,
       role: 'user',
@@ -819,6 +833,28 @@ Buat konten yang profesional, informatif, dan sesuai dengan topik.`;
           <div className="flex-1" />
 
           <div className="flex items-center gap-2">
+            {/* Conversation Mode Toggle */}
+            <button
+              onClick={() => {
+                const newMode = !isConversationMode;
+                setIsConversationMode(newMode);
+                if (newMode) {
+                  setConversationStep('listening');
+                } else {
+                  setConversationStep('idle');
+                  window.speechSynthesis.cancel();
+                }
+              }}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg transition-colors ${isConversationMode
+                ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                : 'bg-[#2f2f2f] text-gray-400 hover:text-white'
+                }`}
+              title={isConversationMode ? "Stop Conversation Mode" : "Start Realtime Conversation"}
+            >
+              <Headset className={`h-4 w-4 ${isConversationMode ? 'animate-pulse' : ''}`} />
+              <span className="hidden sm:inline">{isConversationMode ? 'Live' : 'Voice'}</span>
+            </button>
+
             {/* Share Chat */}
             <button
               onClick={handleShareChat}
@@ -883,6 +919,8 @@ Buat konten yang profesional, informatif, dan sesuai dengan topik.`;
                   onOpenCanvas={handleOpenCanvas}
                   onGeneratePPT={handleGeneratePPT}
                   onExport={handleOpenExportModal}
+                  autoSpeak={isConversationMode && conversationStep === 'speaking' && index === activeConversation.messages.length - 1 && message.role === 'assistant'}
+                  onSpeakEnd={() => setConversationStep('listening')}
                 />
               ))}
               {isLoading && (
@@ -921,6 +959,8 @@ Buat konten yang profesional, informatif, dan sesuai dengan topik.`;
             isLoading={isLoading}
             onStop={() => { setIsLoading(false); }}
             selectedModel={selectedModel}
+            conversationMode={isConversationMode}
+            conversationStep={conversationStep}
             onModelChange={setSelectedModel}
             activeProject={activeProject}
             activeProjectName={activeProject?.name}
@@ -935,56 +975,58 @@ Buat konten yang profesional, informatif, dan sesuai dengan topik.`;
       </main>
 
       {/* Admin Login Modal */}
-      {showAdminLogin && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100]">
-          <div className="bg-[#2f2f2f] border border-[#404040] rounded-xl p-6 w-96 shadow-2xl">
-            <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-              <Shield className="h-5 w-5 text-amber-500" />
-              Admin Access
-            </h3>
-            <p className="text-gray-400 text-sm mb-4">
-              Masukkan password administrator untuk mengaktifkan fitur upload dan manajemen database.
-            </p>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              if (adminPasswordInput === "hdi2024") {
-                setIsAdmin(true);
-                setShowAdminLogin(false);
-                setAdminPasswordInput('');
-              } else {
-                alert("Password salah!");
-              }
-            }}>
-              <input
-                type="password"
-                value={adminPasswordInput}
-                onChange={(e) => setAdminPasswordInput(e.target.value)}
-                placeholder="Password Admin"
-                className="w-full bg-[#171717] border border-[#404040] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-amber-500 mb-4"
-                autoFocus
-              />
-              <div className="flex justify-end gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowAdminLogin(false);
-                    setAdminPasswordInput('');
-                  }}
-                  className="px-4 py-2 text-gray-300 hover:text-white hover:bg-[#404040] rounded-lg transition-colors"
-                >
-                  Batal
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors font-medium"
-                >
-                  Masuk
-                </button>
-              </div>
-            </form>
+      {
+        showAdminLogin && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100]">
+            <div className="bg-[#2f2f2f] border border-[#404040] rounded-xl p-6 w-96 shadow-2xl">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <Shield className="h-5 w-5 text-amber-500" />
+                Admin Access
+              </h3>
+              <p className="text-gray-400 text-sm mb-4">
+                Masukkan password administrator untuk mengaktifkan fitur upload dan manajemen database.
+              </p>
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                if (adminPasswordInput === "hdi2024") {
+                  setIsAdmin(true);
+                  setShowAdminLogin(false);
+                  setAdminPasswordInput('');
+                } else {
+                  alert("Password salah!");
+                }
+              }}>
+                <input
+                  type="password"
+                  value={adminPasswordInput}
+                  onChange={(e) => setAdminPasswordInput(e.target.value)}
+                  placeholder="Password Admin"
+                  className="w-full bg-[#171717] border border-[#404040] rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-amber-500 mb-4"
+                  autoFocus
+                />
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAdminLogin(false);
+                      setAdminPasswordInput('');
+                    }}
+                    className="px-4 py-2 text-gray-300 hover:text-white hover:bg-[#404040] rounded-lg transition-colors"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors font-medium"
+                  >
+                    Masuk
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
+        )
+      }
 
       {/* Canvas */}
       <Canvas
@@ -995,14 +1037,16 @@ Buat konten yang profesional, informatif, dan sesuai dengan topik.`;
       />
 
       {/* R&D Database Modal */}
-      {rndDatabaseOpen && (
-        <RnDDatabase
-          isOpen={rndDatabaseOpen}
-          onClose={() => setRndDatabaseOpen(false)}
-          onAskAI={handleSuggestionClick}
-          isAdmin={isAdmin}
-        />
-      )}
+      {
+        rndDatabaseOpen && (
+          <RnDDatabase
+            isOpen={rndDatabaseOpen}
+            onClose={() => setRndDatabaseOpen(false)}
+            onAskAI={handleSuggestionClick}
+            isAdmin={isAdmin}
+          />
+        )
+      }
 
       {/* PPT Generator Modal */}
       <PPTGeneratorModal
@@ -1027,7 +1071,7 @@ Buat konten yang profesional, informatif, dan sesuai dengan topik.`;
         onClose={() => setPromptModalOpen(false)}
         onSelectPrompt={handleSelectPrompt}
       />
-    </div>
+    </div >
   );
 };
 

@@ -16,7 +16,9 @@ const ChatInput = ({
   isAdmin,
   onOpenPromptLibrary,
   externalMessage,
-  onClearExternalMessage
+  onClearExternalMessage,
+  conversationMode,
+  conversationStep
 }) => {
   const [message, setMessage] = useState('');
   const [showModelSelector, setShowModelSelector] = useState(false);
@@ -50,9 +52,9 @@ const ChatInput = ({
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = true;
+      recognitionRef.current.continuous = !conversationMode; // Stop on silence if in conversation mode
       recognitionRef.current.interimResults = true;
-      recognitionRef.current.lang = 'id-ID'; // Set to Indonesian
+      recognitionRef.current.lang = 'id-ID';
 
       recognitionRef.current.onresult = (event) => {
         let interimTranscript = '';
@@ -67,27 +69,77 @@ const ChatInput = ({
         }
 
         if (finalTrans) {
-          setMessage(prev => prev + ' ' + finalTrans);
+          setMessage(prev => {
+            const newMessage = prev + ' ' + finalTrans;
+            // Auto submit in conversation mode
+            if (conversationMode) {
+              // Determine if we should wait a bit or send immediately? 
+              // For now, let's send immediately if we have final result
+              // BUT we need to check if there is content. 
+              // We'll trust the onend event to trigger the send for better flow
+            }
+            return newMessage;
+          });
         }
       };
 
       recognitionRef.current.onerror = (event) => {
         console.error('Speech recognition error', event.error);
-        setIsRecording(false);
+        if (event.error !== 'no-speech') {
+          setIsRecording(false);
+        }
       };
 
       recognitionRef.current.onend = () => {
-        // If still supposed to be recording, restart it (browser sometimes stops it)
-        if (isRecording) {
-          try {
-            recognitionRef.current.start();
-          } catch (e) {
+        if (conversationMode) {
+          // In conversation mode, end of speech means SUBMIT if we have text
+          if (textareaRef.current && textareaRef.current.value.trim().length > 0) {
             setIsRecording(false);
+            // Trigger submit via a synthesized event or direct call
+            // We can't easily call handleSubmit(e) without an event object
+            // So we'll effectively do what handleSubmit does
+            const content = textareaRef.current.value.trim();
+            if (content && !isLoading) {
+              onSend(content, attachments);
+              setMessage('');
+              setAttachments([]);
+            }
+          } else {
+            // No text? If we are still supposed to be listening (step==listening), restart
+            if (conversationStep === 'listening') {
+              try { recognitionRef.current.start(); } catch (e) { }
+            } else {
+              setIsRecording(false);
+            }
+          }
+        } else {
+          // Normal mode: restart if isRecording indicates we should be recording
+          if (isRecording) {
+            try {
+              recognitionRef.current.start();
+            } catch (e) {
+              setIsRecording(false);
+            }
           }
         }
       };
     }
-  }, [isRecording]);
+  }, [isRecording, conversationMode, conversationStep, isLoading, attachments, onSend]);
+
+  // Effect to manage recording state based on conversation step
+  useEffect(() => {
+    if (conversationMode) {
+      if (conversationStep === 'listening' && !isRecording && !isLoading) {
+        // Start listening
+        setIsRecording(true);
+        try { recognitionRef.current?.start(); } catch (e) { }
+      } else if (conversationStep !== 'listening' && isRecording) {
+        // Stop listening
+        setIsRecording(false);
+        try { recognitionRef.current?.stop(); } catch (e) { }
+      }
+    }
+  }, [conversationMode, conversationStep, isRecording, isLoading]);
 
   const toggleRecording = () => {
     if (!recognitionRef.current) {

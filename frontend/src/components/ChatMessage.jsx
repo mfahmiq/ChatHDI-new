@@ -10,27 +10,37 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas, onGeneratePP
   const utteranceRef = React.useRef(null);
 
   // Handle Text-to-Speech
-  const handleSpeak = () => {
+  const handleSpeak = React.useCallback(() => {
     if (isSpeaking) {
       window.speechSynthesis.cancel();
       setIsSpeaking(false);
+      if (onSpeakEnd) onSpeakEnd();
     } else {
       const utterance = new SpeechSynthesisUtterance(message.content);
       utterance.lang = 'id-ID';
 
       utterance.onend = () => {
         setIsSpeaking(false);
+        if (onSpeakEnd) onSpeakEnd();
       };
 
       utterance.onerror = () => {
         setIsSpeaking(false);
+        if (onSpeakEnd) onSpeakEnd();
       };
 
       utteranceRef.current = utterance;
       window.speechSynthesis.speak(utterance);
       setIsSpeaking(true);
     }
-  };
+  }, [isSpeaking, message.content, onSpeakEnd]);
+
+  // Auto-speak effect
+  React.useEffect(() => {
+    if (autoSpeak && !isSpeaking) {
+      handleSpeak();
+    }
+  }, [autoSpeak, handleSpeak]);
 
   // Cleanup speech on unmount
   React.useEffect(() => {
