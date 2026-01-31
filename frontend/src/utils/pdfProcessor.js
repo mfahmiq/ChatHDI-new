@@ -5,7 +5,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 // For create-react-app / webpack, we might need to copy the worker or use a CDN
 // Using unpkg with specific version and .mjs extension for v5+ compatibility
 // We use a fixed fallback version if the dynamic one fails or for stability
-pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@4.4.168/build/pdf.worker.min.mjs`;
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js`;
 
 /**
  * Extract text from a uploaded PDF file
