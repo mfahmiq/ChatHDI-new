@@ -194,12 +194,15 @@ class MediaService:
         message_lower = message.lower()
         
         # Check each master prompt template
-        for template_id, template_data in self.master_prompts.items():
-            for keyword in template_data["keywords"]:
-                if keyword in message_lower:
-                    # Extract parameters from message
-                    params = self._extract_parameters(message, template_id)
-                    return (template_id, params)
+        # Disabled for now to prevent hallucinations in chat mode
+        return (None, {}) 
+        
+        # for template_id, template_data in self.master_prompts.items():
+        #     for keyword in template_data["keywords"]:
+        #         if keyword in message_lower:
+        #             # Extract parameters from message
+        #             params = self._extract_parameters(message, template_id)
+        #             return (template_id, params)
         
         return (None, {})
     
@@ -231,11 +234,14 @@ class MediaService:
             r'fungsi\s+(.+?)(?:\s+dengan|\.|$)',
         ]
         
-        for pattern in function_patterns:
-            match = re.search(pattern, message, re.IGNORECASE)
-            if match:
-                params['TECHNICAL_FUNCTION'] = match.group(1).strip()
-                break
+        #     r'fungsi\s+(.+?)(?:\s+dengan|\.|$)',
+        # ]
+        
+        # for pattern in function_patterns:
+        #     match = re.search(pattern, message, re.IGNORECASE)
+        #     if match:
+        #         params['TECHNICAL_FUNCTION'] = match.group(1).strip()
+        #         break
         
         # Set defaults based on template
         if template_id == "engineering_cad":
@@ -286,6 +292,9 @@ class MediaService:
             Tuple of (media_type, prompt) where media_type is 'image', 'video', or None
         """
         message_lower = message.lower()
+        
+        # FORCE DISABLE IMAGE GENERATION FOR NOW to prevent hallucinations
+        return (None, None)
         
         # Image generation keywords
         image_keywords = [

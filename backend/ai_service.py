@@ -5,6 +5,7 @@ Supports:
 - Vercel AI Gateway (requires credit card)
 - Google Gemini (direct API)
 - Groq (fast inference)
+- Web Search via DuckDuckGo (FREE)
 """
 
 import os
@@ -14,6 +15,18 @@ from openai import AsyncOpenAI
 from typing import List, Dict
 
 logger = logging.getLogger(__name__)
+
+# Import search service (lazy import to avoid circular dependency)
+search_service = None
+def get_search_service():
+    global search_service
+    if search_service is None:
+        try:
+            from search_service import search_service as ss
+            search_service = ss
+        except ImportError as e:
+            logger.warning(f"Search service not available: {e}")
+    return search_service
 
 # Get API Keys
 GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '')
@@ -128,6 +141,9 @@ MODEL_MAPPING = {
     # === GROQ - Ultra Fast Inference (Free) ===
     "hdi-grok": ("groq", "llama-3.3-70b-versatile", "Llama 3.3 70B via Groq"),
     "hdi-grok-mini": ("groq", "llama-3.1-8b-instant", "Llama 3.1 8B (instant)"),
+    
+    # === WEB SEARCH (Free, no API key) ===
+    "hdi-search": ("web-search", "llama-3.3-70b-versatile", "Web Search + Llama 3.3"),
 }
 
 
@@ -144,6 +160,8 @@ class AIService:
         model_info = MODEL_MAPPING.get(model_id, ("aiml", "gpt-4o", "Default GPT-4o"))
         provider = model_info[0]
         model_name = model_info[1]
+        
+        logger.info(f"Chat request: model_id={model_id}, provider={provider}, model={model_name}")
         
         logger.info(f"Chat request: model_id={model_id}, provider={provider}, model={model_name}")
         
@@ -179,6 +197,8 @@ class AIService:
             return await self._chat_vercel_with_grounding(messages, model_name)
         elif provider == "groq":
             return await self._chat_groq(messages, model_name)
+        elif provider == "web-search":
+            return await self._chat_with_search(messages, model_name)
         else:
             return await self._chat_gemini(messages, model_name)
 
@@ -336,6 +356,105 @@ Pertanyaan user memerlukan informasi real-time, jadi berikan jawaban yang akurat
         except Exception as e:
             logger.error(f"Groq Error: {e}")
             return f"❌ Error dari Groq: {str(e)}"
+
+    async def _chat_with_search(self, messages: List[Dict], model_name: str) -> str:
+        """Handle chat with web search + LLM"""
+        search_svc = get_search_service()
+        
+        if not search_svc:
+            return """❌ **Web Search tidak tersedia**
+
+Pastikan package `duckduckgo_search` sudah diinstall:
+```bash
+pip install duckduckgo-search
+```
+
+Lalu restart backend server."""
+        
+        if not groq_client:
+            return "❌ Error: GROQ_API_KEY tidak dikonfigurasi. Web Search memerlukan LLM untuk memproses hasil."
+        
+        try:
+            # Get the last user message for search
+            last_user_msg = ""
+            for msg in reversed(messages):
+                if msg["role"] == "user":
+                    last_user_msg = msg["content"]
+                    break
+            
+            if not last_user_msg:
+                return "❌ Error: Tidak ada pesan user untuk dicari."
+            
+            logger.info(f"Web search query: {last_user_msg}")
+            
+            # Perform web search
+            search_results = await search_svc.search(last_user_msg, max_results=5)
+            
+            logger.info(f"Web search returned {len(search_results)} results")
+            
+            if not search_results:
+                logger.warning("No search results found, returning message to user")
+                return f"""🔍 **Web Search tidak menemukan hasil untuk: "{last_user_msg}"**
+
+Coba:
+- Gunakan kata kunci yang lebih spesifik
+- Periksa ejaan
+- Coba dengan bahasa Inggris
+
+Atau tanyakan langsung tanpa Web Search."""
+            
+            # Format search results as context
+            search_context = search_svc.format_results_for_ai(search_results, last_user_msg)
+            
+            # Create enhanced prompt with search results
+            search_prompt = f"""{SYSTEM_PROMPT}
+
+**MODE WEB SEARCH AKTIF**
+
+Kamu memiliki akses ke hasil pencarian web terbaru. Gunakan informasi dari hasil pencarian di bawah untuk menjawab pertanyaan user dengan akurat dan up-to-date.
+
+{search_context}
+
+**Instruksi:**
+1. Gunakan informasi dari hasil pencarian di atas untuk menjawab
+2. Jawab dengan lengkap dan informatif
+3. JANGAN sertakan daftar sumber di akhir - sumber akan ditambahkan secara otomatis
+4. Format jawaban dengan rapi menggunakan Markdown"""
+
+            # Prepare messages with search context
+            formatted_messages = [{"role": "system", "content": search_prompt}]
+            formatted_messages.extend(messages)
+            
+            # Use Groq for fast response
+            response = await groq_client.chat.completions.create(
+                model=model_name,
+                messages=formatted_messages,
+            )
+            
+            result = response.choices[0].message.content
+            
+            # Build sources section with clickable links
+            sources_section = "\n\n---\n\n📚 **Sumber:**\n"
+            for i, sr in enumerate(search_results, 1):
+                title = sr.get('title', 'Untitled')[:60]
+                link = sr.get('link', '')
+                if link:
+                    sources_section += f"{i}. [{title}]({link})\n"
+                else:
+                    sources_section += f"{i}. {title}\n"
+            
+            # Add search indicator and sources
+            if not result.startswith("🔍"):
+                result = f"🔍 **Hasil dengan Web Search:**\n\n{result}"
+            
+            result += sources_section
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"Web Search Error: {e}")
+            # Fallback to regular Groq chat
+            return await self._chat_groq(messages, model_name)
 
     async def _chat_gemini(self, messages: List[Dict], model_name: str) -> str:
         """Handle chat with Google Gemini (Direct API)"""
