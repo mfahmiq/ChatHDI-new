@@ -999,6 +999,8 @@ Buat konten yang profesional, informatif, dan sesuai dengan topik.`;
         <RnDDatabase
           isOpen={rndDatabaseOpen}
           onClose={() => setRndDatabaseOpen(false)}
+          onAskAI={handleSuggestionClick}
+          isAdmin={isAdmin}
         />
       )}
 
