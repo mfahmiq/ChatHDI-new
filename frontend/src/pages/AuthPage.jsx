@@ -45,7 +45,7 @@ const AuthPage = () => {
                 {/* Header */}
                 <div className="p-8 pb-0 text-center">
                     <div className="w-20 h-20 mx-auto mb-4">
-                        <img src="logo-hdi.png" alt="HDI Logo" className="w-full h-full object-contain" />
+                        <img src="/icons/logo-hdi.png" alt="HDI Logo" className="w-16 h-16 object-contain" />
                     </div>
                     <h2 className="text-2xl font-bold mb-2">Welcome to ChatHDI</h2>
                     <p className="text-gray-400">
