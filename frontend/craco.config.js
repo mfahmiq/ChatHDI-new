@@ -69,6 +69,26 @@ const webpackConfig = {
       "node:process": false,
     },
     configure: (webpackConfig) => {
+      // Suppress source map warnings/errors from dependencies
+      webpackConfig.ignoreWarnings = [
+        ...(webpackConfig.ignoreWarnings || []),
+        /Failed to parse source map/,
+        /source-map-loader/,
+      ];
+
+      // Exclude node_modules from source-map-loader to avoid ENOENT errors
+      webpackConfig.module.rules.forEach(rule => {
+        if (rule.oneOf) {
+          rule.oneOf.forEach(subRule => {
+            if (subRule.loader && subRule.loader.includes('source-map-loader')) {
+              subRule.exclude = /node_modules/;
+            }
+          });
+        }
+        if (rule.loader && rule.loader.includes('source-map-loader')) {
+          rule.exclude = /node_modules/;
+        }
+      });
 
       // Add ignored patterns to reduce watched directories
       webpackConfig.watchOptions = {
@@ -134,6 +154,9 @@ const webpackConfig = {
             }
           }
         ),
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^node:/,
+        }),
       ];
 
       // Aggressively handle node: scheme via externals for browser

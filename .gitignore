@@ -94,3 +94,7 @@ frontend/build/dist/ChatHDI-Windows-1.0.0.zip
 *.env
 *.env.*
 !*.env.example
+/frontend/release_build
+/frontend/build
+node_modules
+/node_modules
