@@ -7,8 +7,9 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Union, Any
 import uuid
+import platform
 from datetime import datetime, timezone
 
 # Configure logging early
@@ -18,9 +19,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+import sys
+
 # Load environment FIRST
-ROOT_DIR = Path(__file__).parent
-load_dotenv(ROOT_DIR / '.env')
+if getattr(sys, 'frozen', False):
+    # Run from PyInstaller exe
+    ROOT_DIR = Path(sys.executable).parent
+else:
+    # Run from script
+    ROOT_DIR = Path(__file__).parent
+
+# Try to load .env from ROOT_DIR or current directory
+env_path = ROOT_DIR / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
+    logger.info(f"Loaded .env from {env_path}")
+else:
+    load_dotenv() # Try default locations
+    logger.info(f".env not found at {env_path}, trying default load")
 
 # Import services after loading env
 from ai_service import ai_service
@@ -97,6 +113,7 @@ in_memory_db = {
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    ensure_data_dir()
     if USE_MONGODB and db:
         try:
             await db.command("ping")
@@ -104,7 +121,7 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error(f"MongoDB connection failed: {e}")
     else:
-        logger.info("Running in demo mode with in-memory storage")
+        logger.info("Running in local file mode (JSON persistence)")
     yield
     # Shutdown
     if client:
@@ -133,6 +150,58 @@ app.add_middleware(
 api_router = APIRouter(prefix="/api")
 
 
+# ============ PERSISTENCE UTILS ============
+import json
+import shutil
+
+def get_data_dir():
+    """Get the application data directory provided by OS"""
+    system = platform.system()
+    if system == "Windows":
+        base_path = Path(os.environ.get("APPDATA")) / "ChatHDI"
+    elif system == "Darwin":
+        base_path = Path.home() / "Library" / "Application Support" / "ChatHDI"
+    else:
+        base_path = Path.home() / ".config" / "chathdi"
+    
+    return base_path / "data"
+
+DATA_DIR = get_data_dir()
+CONVERSATIONS_FILE = DATA_DIR / "conversations.json"
+
+def ensure_data_dir():
+    """Ensure data directory exists"""
+    try:
+        DATA_DIR.mkdir(parents=True, exist_ok=True)
+        if not CONVERSATIONS_FILE.exists():
+            with open(CONVERSATIONS_FILE, 'w', encoding='utf-8') as f:
+                json.dump([], f)
+        logger.info(f"Data directory: {DATA_DIR}")
+    except Exception as e:
+        logger.error(f"Failed to create data directory: {e}")
+
+def load_conversations_from_file():
+    """Load conversations from JSON file"""
+    try:
+        if CONVERSATIONS_FILE.exists():
+            with open(CONVERSATIONS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        return []
+    except Exception as e:
+        logger.error(f"Error loading conversations: {e}")
+        return []
+
+def save_conversations_to_file(conversations):
+    """Save conversations to JSON file"""
+    try:
+        with open(CONVERSATIONS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(conversations, f, default=str)
+        return True
+    except Exception as e:
+        logger.error(f"Error saving conversations: {e}")
+        return False
+
+
 # Define Models
 class StatusCheck(BaseModel):
     model_config = ConfigDict(extra="ignore")
@@ -145,7 +214,18 @@ class StatusCheckCreate(BaseModel):
 
 class ChatMessage(BaseModel):
     role: str  # "user" or "assistant"
-    content: str
+    content: Any # Allow string or list of dicts (for images)
+    timestamp: Optional[str] = None
+    mediaType: Optional[str] = None
+    mediaData: Optional[List[str]] = None
+
+class Conversation(BaseModel):
+    id: str
+    title: str
+    messages: List[Dict]
+    timestamp: Optional[Union[datetime, str]] = None
+    projectId: Optional[str] = None
+    isPinned: bool = False
 
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
@@ -232,6 +312,43 @@ async def get_status_checks():
     return status_checks
 
 
+# ============ CONVERSATION ENDPOINTS ============
+
+@api_router.get("/conversations", response_model=List[Dict])
+async def get_conversations():
+    """Get all saved conversations"""
+    return load_conversations_from_file()
+
+@api_router.post("/conversations")
+async def save_conversation(conversation: Conversation):
+    """Save or update a conversation"""
+    conversations = load_conversations_from_file()
+    
+    # Check if exists, update if so, else append
+    existing_idx = next((i for i, c in enumerate(conversations) if c['id'] == conversation.id), -1)
+    
+    conv_data = conversation.model_dump()
+    # Ensure timestamp is string
+    if isinstance(conv_data.get('timestamp'), datetime):
+        conv_data['timestamp'] = conv_data['timestamp'].isoformat()
+    
+    if existing_idx >= 0:
+        conversations[existing_idx] = conv_data
+    else:
+        conversations.insert(0, conv_data)  # Add to top
+        
+    save_conversations_to_file(conversations)
+    return conv_data
+
+@api_router.delete("/conversations/{conversation_id}")
+async def delete_conversation(conversation_id: str):
+    """Delete a conversation"""
+    conversations = load_conversations_from_file()
+    conversations = [c for c in conversations if c['id'] != conversation_id]
+    save_conversations_to_file(conversations)
+    return {"success": True, "id": conversation_id}
+
+
 # Chat endpoint - Main AI functionality
 @api_router.post("/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
@@ -250,10 +367,24 @@ async def chat(request: ChatRequest):
         messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
         
         # Get last user message
-        last_message = messages[-1]["content"] if messages else ""
+        last_message = ""
+        if messages:
+            raw_content = messages[-1]["content"]
+            if isinstance(raw_content, str):
+                last_message = raw_content
+            elif isinstance(raw_content, list):
+                # Extract text from multimodal content
+                for part in raw_content:
+                    if isinstance(part, dict) and part.get("type") == "text":
+                        last_message += part.get("text", "") + " "
+                last_message = last_message.strip()
         
         # Check if user is requesting media generation
-        media_type, media_prompt = media_service.detect_media_request(last_message)
+        # Skip detection if message is very long (likely contains RAG context) to prevent false positives
+        if len(last_message) > 500:
+             media_type, media_prompt = None, None
+        else:
+             media_type, media_prompt = media_service.detect_media_request(last_message)
         
         # Override detection if specific media model is selected
         if request.model == 'hdi-image' or request.model == 'hdi-image-flux':
@@ -263,23 +394,23 @@ async def chat(request: ChatRequest):
             media_type = 'video'
             media_prompt = last_message
         
-        if media_type == 'image':
-            # Generate image
-            result = await media_service.generate_image(media_prompt)
-            if result['success']:
-                return ChatResponse(
-                    response=f"Saya telah membuat gambar berdasarkan permintaan: \"{media_prompt[:100]}...\"",
-                    model=result['model'],
-                    media_type="image",
-                    media_data=result['images']
-                )
-            else:
-                # Fallback to text response
-                response = await ai_service.chat(messages, request.model)
-                return ChatResponse(
-                    response=f"Maaf, gagal membuat gambar: {result['error']}\n\nSebagai gantinya, berikut penjelasan:\n\n{response}",
-                    model=request.model
-                )
+        # if media_type == 'image':
+        #     # Generate image
+        #     result = await media_service.generate_image(media_prompt)
+        #     if result['success']:
+        #         return ChatResponse(
+        #             response=f"Saya telah membuat gambar berdasarkan permintaan: \"{media_prompt[:100]}...\"",
+        #             model=result['model'],
+        #             media_type="image",
+        #             media_data=result['images']
+        #         )
+        #     else:
+        #         # Fallback to text response
+        #         response = await ai_service.chat(messages, request.model)
+        #         return ChatResponse(
+        #             response=f"Maaf, gagal membuat gambar: {result['error']}\n\nSebagai gantinya, berikut penjelasan:\n\n{response}",
+        #             model=request.model
+        #         )
         
         elif media_type == 'video':
             # Generate video
@@ -435,4 +566,10 @@ async def get_master_prompts():
 
 
 # Include the router in the main app
+# Include the router in the main app
 app.include_router(api_router)
+
+if __name__ == "__main__":
+    import uvicorn
+    # Use 0.0.0.0 to allow access from other machines if needed, or 127.0.0.1 for local only
+    uvicorn.run(app, host="127.0.0.1", port=8000)

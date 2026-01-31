@@ -1,11 +1,70 @@
 import React from 'react';
-import { User, Copy, Check, RefreshCw, ThumbsUp, ThumbsDown, Share, Bookmark, MoreHorizontal, Sparkles, Download, Play, Image as ImageIcon, Film, FileText, FolderOpen } from 'lucide-react';
+import { User, Copy, Check, RefreshCw, ThumbsUp, ThumbsDown, Share, Bookmark, MoreHorizontal, Sparkles, Download, Play, Image as ImageIcon, Film, FileText, FolderOpen, StopCircle, Table } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
+const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas, onGeneratePPT, onExport, onBookmark }) => {
   const [copied, setCopied] = React.useState(false);
   const [liked, setLiked] = React.useState(null);
+  const [isSpeaking, setIsSpeaking] = React.useState(false);
   const isUser = message.role === 'user';
+  const utteranceRef = React.useRef(null);
+
+  // Handle Text-to-Speech
+  const handleSpeak = () => {
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    } else {
+      const utterance = new SpeechSynthesisUtterance(message.content);
+      utterance.lang = 'id-ID';
+
+      utterance.onend = () => {
+        setIsSpeaking(false);
+      };
+
+      utterance.onerror = () => {
+        setIsSpeaking(false);
+      };
+
+      utteranceRef.current = utterance;
+      window.speechSynthesis.speak(utterance);
+      setIsSpeaking(true);
+    }
+  };
+
+  // Cleanup speech on unmount
+  React.useEffect(() => {
+    return () => {
+      if (isSpeaking) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [isSpeaking]);
+
+  const hasTable = React.useMemo(() => {
+    return message.content.includes('|') && message.content.includes('---');
+  }, [message.content]);
+
+  const handleExportData = async (format) => {
+    try {
+      const { parseMarkdownTable, exportToExcel, exportToCSV } = await import('../utils/dataExporter');
+      const data = parseMarkdownTable(message.content);
+
+      if (data.length === 0) {
+        alert("Tidak ada data tabel yang valid ditemukan.");
+        return;
+      }
+
+      if (format === 'excel') {
+        exportToExcel(data, `ChatHDI_Data_${Date.now()}.xlsx`);
+      } else {
+        exportToCSV(data, `ChatHDI_Data_${Date.now()}.csv`);
+      }
+    } catch (error) {
+      console.error("Export Data Error:", error);
+      alert("Gagal export data.");
+    }
+  };
 
   // Extract all code blocks from message content
   const extractAllCodeBlocks = (content) => {
@@ -218,7 +277,19 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
       return (
         <div key={index} className="whitespace-pre-wrap">
           {part.split('\n').map((line, lineIndex) => {
-            let processedLine = line.replace(/\*\*(.+?)\*\*/g, '<strong class="text-white">$1</strong>');
+            // Process markdown formatting
+            let processedLine = line;
+
+            // Convert markdown links [text](url) to clickable anchor tags
+            processedLine = processedLine.replace(
+              /\[([^\]]+)\]\(([^)]+)\)/g,
+              '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 underline transition-colors">$1</a>'
+            );
+
+            // Bold text
+            processedLine = processedLine.replace(/\*\*(.+?)\*\*/g, '<strong class="text-white">$1</strong>');
+
+            // Inline code
             processedLine = processedLine.replace(/`([^`]+)`/g, '<code class="bg-[#2f2f2f] text-emerald-400 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>');
 
             if (line.startsWith('- ') || line.startsWith('• ')) {
@@ -279,7 +350,7 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
             {isUser ? (
               <User className="h-5 w-5 text-white" />
             ) : (
-              <img src="/icons/logo-hdi.png" alt="HDI" className="h-6 w-6 object-contain" />
+              <img src="logo-hdi.png" alt="HDI" className="h-6 w-6 object-contain" />
             )}
           </div>
 
@@ -343,7 +414,7 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
 
             {/* Action buttons */}
             {!isUser && (
-              <div className="flex items-center gap-1 mt-4 pt-3 border-t border-[#2f2f2f]/50 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 mt-4 pt-3 border-t border-[#2f2f2f]/50 transition-opacity">
                 <button
                   onClick={handleCopy}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 hover:bg-[#2f2f2f] rounded-lg text-gray-400 hover:text-white transition-colors text-xs"
@@ -379,8 +450,52 @@ const ChatMessage = ({ message, onRegenerate, isLast, onOpenCanvas }) => {
                   <ThumbsDown className="h-4 w-4" />
                 </button>
                 <div className="flex-1" />
-                <button className="p-1.5 hover:bg-[#2f2f2f] rounded-lg text-gray-400 hover:text-white transition-colors">
-                  <Bookmark className="h-4 w-4" />
+                <button
+                  onClick={handleSpeak}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-colors",
+                    isSpeaking
+                      ? "text-emerald-500 bg-emerald-500/10"
+                      : "text-gray-400 hover:text-white hover:bg-[#2f2f2f]"
+                  )}
+                  title={isSpeaking ? "Stop Speaking" : "Read Aloud"}
+                >
+                  {isSpeaking ? <StopCircle className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+                </button>
+                <button
+                  onClick={() => onBookmark && onBookmark()}
+                  className={cn(
+                    "p-1.5 rounded-lg transition-colors",
+                    message.isBookmarked
+                      ? "text-yellow-500 hover:text-yellow-400"
+                      : "text-gray-400 hover:text-white hover:bg-[#2f2f2f]"
+                  )}
+                  title={message.isBookmarked ? "Remove Bookmark" : "Bookmark Message"}
+                >
+                  <Bookmark className={cn("h-4 w-4", message.isBookmarked && "fill-current")} />
+                </button>
+                {hasTable && (
+                  <button
+                    onClick={() => handleExportData('excel')}
+                    className="p-1.5 hover:bg-[#2f2f2f] rounded-lg text-gray-400 hover:text-white transition-colors"
+                    title="Export Table to Excel"
+                  >
+                    <Table className="h-4 w-4" />
+                  </button>
+                )}
+                <button
+                  onClick={() => onGeneratePPT && onGeneratePPT(message.content)}
+                  className="p-1.5 hover:bg-[#2f2f2f] rounded-lg text-gray-400 hover:text-white transition-colors"
+                  title="Generate PPT from this message"
+                >
+                  <FileText className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => onExport && onExport(message.content)}
+                  className="p-1.5 hover:bg-[#2f2f2f] rounded-lg text-gray-400 hover:text-white transition-colors"
+                  title="Export to Word/PDF"
+                >
+                  <Download className="h-4 w-4" />
                 </button>
                 <button className="p-1.5 hover:bg-[#2f2f2f] rounded-lg text-gray-400 hover:text-white transition-colors">
                   <Share className="h-4 w-4" />

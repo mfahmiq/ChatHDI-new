@@ -3,9 +3,11 @@ import {
   Plus, MessageSquare, MoreHorizontal, Pencil, Trash2, Menu, X,
   FolderOpen, Folder, ChevronDown, ChevronRight, Pin, Search,
   Settings, Star, Archive, FolderPlus, Hash, Sparkles, Download,
-  CheckCircle, Clock, Zap, ArrowRight
+  CheckCircle, Clock, Zap, ArrowRight, LogOut
 } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { useAuth } from '../contexts/AuthContext';
+import SettingsModal from './SettingsModal';
 
 const Sidebar = ({
   projects,
@@ -17,19 +19,39 @@ const Sidebar = ({
   onRenameConversation,
   onTogglePin,
   onCreateProject,
+  onDeleteProject,
   onMoveToProject,
   activeProject,
   onSelectProject,
   isMobileOpen,
   onCloseMobile
 }) => {
+  const { user, logout } = useAuth();
   const [editingId, setEditingId] = React.useState(null);
   const [editTitle, setEditTitle] = React.useState('');
-  const [expandedProjects, setExpandedProjects] = React.useState(['proj-1', 'proj-2', 'proj-3']);
+  const [expandedProjects, setExpandedProjects] = React.useState([]);
   const [searchQuery, setSearchQuery] = React.useState('');
   const [showNewProject, setShowNewProject] = React.useState(false);
   const [newProjectName, setNewProjectName] = React.useState('');
   const [showUpdateModal, setShowUpdateModal] = React.useState(false);
+  const [imageError, setImageError] = React.useState(false);
+  const [showProjectMenu, setShowProjectMenu] = React.useState(null);
+
+  // Initialize expanded projects
+  React.useEffect(() => {
+    if (projects && projects.length > 0) {
+      setExpandedProjects(projects.map(p => p.id));
+    }
+  }, [projects]);
+
+  // Reset error when user changes
+  React.useEffect(() => {
+    setImageError(false);
+  }, [user]);
+
+  const avatarUrl = !imageError && (user?.user_metadata?.avatar_url || user?.user_metadata?.picture)
+    ? (user?.user_metadata?.avatar_url || user?.user_metadata?.picture)
+    : `https://ui-avatars.com/api/?name=${user?.user_metadata?.full_name || user?.email || 'User'}&background=random&color=fff`;
 
   const toggleProject = (projectId) => {
     setExpandedProjects(prev =>
@@ -50,9 +72,14 @@ const Sidebar = ({
     }
   };
 
-  const filteredConversations = conversations.filter(conv =>
-    conv.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredConversations = conversations.filter(conv => {
+    const query = searchQuery.toLowerCase();
+    const titleMatch = conv.title?.toLowerCase().includes(query);
+    const contentMatch = conv.messages?.some(msg =>
+      msg.content?.toLowerCase().includes(query)
+    );
+    return titleMatch || contentMatch;
+  });
 
   const pinnedConversations = filteredConversations.filter(c => c.isPinned);
   const projectConversations = (projectId) =>
@@ -70,6 +97,11 @@ const Sidebar = ({
       onRenameConversation(id, editTitle.trim());
     }
     setEditingId(null);
+  };
+
+  const handleMoveClick = (convId, projectId) => {
+    onMoveToProject(convId, projectId);
+    setShowProjectMenu(null);
   };
 
   const ConversationItem = ({ conv }) => (
@@ -111,6 +143,38 @@ const Sidebar = ({
 
       {editingId !== conv.id && (
         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* Move to Project Trigger */}
+          <div className="relative">
+            <button
+              onClick={(e) => { e.stopPropagation(); setShowProjectMenu(showProjectMenu === conv.id ? null : conv.id); }}
+              className="p-1 hover:bg-[#40414f] rounded text-gray-400 hover:text-white"
+              title="Move to Project"
+            >
+              <MoreHorizontal className="h-3.5 w-3.5" />
+            </button>
+
+            {showProjectMenu === conv.id && (
+              <div className="absolute right-0 top-6 w-40 bg-[#1e1e1e] border border-[#2f2f2f] rounded-lg shadow-xl z-50 py-1">
+                <div className="px-2 py-1 text-xs text-gray-500 uppercase">Pindah ke...</div>
+                <button
+                  onClick={(e) => { e.stopPropagation(); handleMoveClick(conv.id, null); }}
+                  className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:bg-[#2f2f2f] flex items-center gap-2"
+                >
+                  <Archive className="h-3 w-3" /> Lainnya (Unorganized)
+                </button>
+                {projects.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={(e) => { e.stopPropagation(); handleMoveClick(conv.id, p.id); }}
+                    className="w-full text-left px-3 py-1.5 text-xs text-gray-300 hover:bg-[#2f2f2f] flex items-center gap-2"
+                  >
+                    <Folder className="h-3 w-3" /> {p.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
           <button
             onClick={(e) => { e.stopPropagation(); onTogglePin(conv.id); }}
             className="p-1 hover:bg-[#40414f] rounded text-gray-400 hover:text-yellow-500"
@@ -150,7 +214,7 @@ const Sidebar = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 flex items-center justify-center">
-                <img src="/icons/logo-hdi.png" alt="Logo" className="w-full h-full object-contain" />
+                <img src="logo-hdi.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <span className="font-semibold text-white">ChatHDI</span>
             </div>
@@ -248,7 +312,7 @@ const Sidebar = ({
             )}
 
             {projects.map(project => (
-              <div key={project.id} className="mb-1">
+              <div key={project.id} className="mb-1 group">
                 <div className="flex items-center">
                   <button
                     onClick={() => toggleProject(project.id)}
@@ -278,6 +342,13 @@ const Sidebar = ({
                     <span className="text-xs text-gray-500 bg-[#2f2f2f] px-1.5 py-0.5 rounded">
                       {projectConversations(project.id).length}
                     </span>
+                  </button>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); onDeleteProject && onDeleteProject(project.id); }}
+                    className="p-2 text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete Project"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
 
@@ -312,204 +383,65 @@ const Sidebar = ({
 
         {/* Footer */}
         <div className="border-t border-[#2f2f2f] p-3">
-          <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-[#2f2f2f] transition-colors cursor-pointer">
-            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center text-white font-semibold text-sm">
-              U
+          <div className="flex items-center gap-3 rounded-lg px-3 py-2.5 hover:bg-[#2f2f2f] transition-colors group">
+            <div className="h-9 w-9 rounded-full bg-gradient-to-br from-emerald-500 to-cyan-500 p-[2px]">
+              <div className="h-full w-full rounded-full bg-[#171717] flex items-center justify-center overflow-hidden">
+                <img
+                  src={avatarUrl}
+                  alt="User"
+                  className="h-full w-full object-cover"
+                  onError={() => setImageError(true)}
+                />
+              </div>
             </div>
-            <div className="flex-1">
-              <div className="text-sm text-white font-medium">User Pro</div>
-              <div className="text-xs text-emerald-500">HDI-4 Active</div>
+            <div className="flex-1 min-w-0">
+              <div className="text-sm text-white font-medium truncate">
+                {user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email?.split('@')[0] || 'User'}
+              </div>
+              <div className="text-xs text-emerald-500 truncate">{user?.email || 'Guest'}</div>
             </div>
-            <button
-              onClick={() => setShowUpdateModal(true)}
-              className="p-1 rounded-lg hover:bg-[#3a3a3a] transition-colors"
-            >
-              <Settings className="h-5 w-5 text-gray-500 hover:text-white transition-colors" />
-            </button>
+            <div className="flex items-center">
+              <button
+                onClick={() => setShowUpdateModal(true)}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-[#3a3a3a] transition-colors"
+                title="Settings"
+              >
+                <Settings className="h-4 w-4" />
+              </button>
+              <button
+                onClick={logout}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-[#3a3a3a] transition-colors ml-1"
+                title="Log Out"
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </aside>
 
-      {/* Update Version Modal */}
+      {/* Settings Modal - Replaces UpdateVersionModal */}
       {showUpdateModal && (
-        <UpdateVersionModal onClose={() => setShowUpdateModal(false)} />
+        <SettingsModal
+          onClose={() => setShowUpdateModal(false)}
+          conversations={conversations}
+          setConversations={(convs) => {
+            // Callback to update parent state if conversations are cleared
+            // We need a way to propagate this up to ChatPage
+            // Since Sidebar props don't have setConversations directly but we can reload page or use a prop if available.
+            // Actually, Sidebar receives `conversations` map, but maybe safer to just reload window or handle it via a new prop?
+            // For now let's just close modal. The actual clearance happens in backend.
+            // Ideally we need onConversationsChange prop.
+            window.location.reload(); // Simple brute force update for "Clear All"
+          }}
+          setActiveConversation={onSelectConversation}
+        />
       )}
     </>
   );
 };
 
 
-// Update Version Modal Component
-const UpdateVersionModal = ({ onClose }) => {
-  const currentVersion = "2.1.0";
-  const latestVersion = "2.2.0";
-  const isUpToDate = currentVersion === latestVersion;
 
-  const updateHistory = [
-    {
-      version: "2.2.0",
-      date: "24 Dec 2024",
-      isLatest: true,
-      changes: [
-        "Fitur Generate PPTX Presentasi",
-        "R&D Database dengan Sync Real-time",
-        "Mode Admin untuk CRUD Database",
-        "Peningkatan UI/UX"
-      ]
-    },
-    {
-      version: "2.1.0",
-      date: "23 Dec 2024",
-      isLatest: false,
-      changes: [
-        "Integrasi Image Generation (Nano Banana)",
-        "Video Generation (Veo 3.0, Sora 2)",
-        "Project Folders untuk organisasi chat",
-        "Tombol fitur di Welcome Screen"
-      ]
-    },
-    {
-      version: "2.0.0",
-      date: "22 Dec 2024",
-      isLatest: false,
-      changes: [
-        "Integrasi AI Real (GPT-4o, Claude)",
-        "Multi-model Support",
-        "Canvas untuk kode",
-        "R&D Database (Mock)"
-      ]
-    },
-    {
-      version: "1.0.0",
-      date: "21 Dec 2024",
-      isLatest: false,
-      changes: [
-        "Rilis awal ChatHDI",
-        "UI seperti ChatGPT",
-        "Sidebar dengan history",
-        "Dark theme"
-      ]
-    }
-  ];
-
-  return (
-    <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4" onClick={onClose}>
-      <div
-        className="bg-[#1a1a1a] rounded-2xl w-full max-w-lg max-h-[85vh] overflow-hidden border border-[#2f2f2f] shadow-2xl"
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="relative px-6 py-5 border-b border-[#2f2f2f] bg-gradient-to-r from-emerald-500/10 to-cyan-500/10">
-          <button
-            onClick={onClose}
-            className="absolute right-4 top-4 p-1.5 hover:bg-[#2f2f2f] rounded-lg text-gray-400 hover:text-white"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 flex items-center justify-center shadow-lg shadow-emerald-500/10 border border-emerald-500/20 p-2">
-              <img src="/icons/logo-hdi.png" alt="Logo" className="w-full h-full object-contain" />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-white">ChatHDI Update</h2>
-              <p className="text-sm text-gray-400">Versi saat ini: <span className="text-emerald-400 font-medium">{currentVersion}</span></p>
-            </div>
-          </div>
-        </div>
-
-        {/* Update Status */}
-        <div className="px-6 py-4 border-b border-[#2f2f2f]">
-          {isUpToDate ? (
-            <div className="flex items-center gap-3 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
-              <CheckCircle className="h-6 w-6 text-emerald-500" />
-              <div>
-                <p className="text-emerald-400 font-medium">Anda menggunakan versi terbaru!</p>
-                <p className="text-xs text-gray-400">ChatHDI v{currentVersion}</p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <div className="flex items-center gap-3 px-4 py-3 bg-amber-500/10 border border-amber-500/30 rounded-xl">
-                <Sparkles className="h-6 w-6 text-amber-500" />
-                <div className="flex-1">
-                  <p className="text-amber-400 font-medium">Update tersedia!</p>
-                  <p className="text-xs text-gray-400">Versi {latestVersion} sudah dirilis</p>
-                </div>
-              </div>
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#2f2f2f] hover:bg-[#3f3f3f] rounded-xl text-white font-medium transition-colors border border-gray-700">
-                <Download className="h-5 w-5" />
-                Update Sekarang
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Version History */}
-        <div className="px-6 py-4 overflow-y-auto max-h-[400px]">
-          <h3 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
-            <Clock className="h-4 w-4" />
-            Riwayat Update
-          </h3>
-          <div className="space-y-4">
-            {updateHistory.map((release, index) => (
-              <div
-                key={release.version}
-                className={cn(
-                  "relative pl-6 pb-4",
-                  index < updateHistory.length - 1 && "border-l border-[#2f2f2f]"
-                )}
-              >
-                {/* Timeline dot */}
-                <div className={cn(
-                  "absolute left-0 top-0 w-3 h-3 rounded-full -translate-x-1.5",
-                  release.isLatest
-                    ? "bg-emerald-500 ring-4 ring-emerald-500/20"
-                    : "bg-[#3a3a3a]"
-                )} />
-
-                {/* Version info */}
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={cn(
-                    "text-sm font-bold",
-                    release.isLatest ? "text-emerald-400" : "text-white"
-                  )}>
-                    v{release.version}
-                  </span>
-                  {release.isLatest && (
-                    <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-xs rounded-full font-medium">
-                      TERBARU
-                    </span>
-                  )}
-                  <span className="text-xs text-gray-500">{release.date}</span>
-                </div>
-
-                {/* Changes */}
-                <ul className="space-y-1">
-                  {release.changes.map((change, i) => (
-                    <li key={i} className="flex items-start gap-2 text-sm text-gray-400">
-                      <Zap className="h-3.5 w-3.5 text-gray-600 mt-0.5 shrink-0" />
-                      {change}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-[#2f2f2f] bg-[#171717]">
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <span>© 2024 HDI - Hydrogen Development Indonesia</span>
-            <a href="#" className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300">
-              Lihat changelog lengkap
-              <ArrowRight className="h-3 w-3" />
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 export default Sidebar;

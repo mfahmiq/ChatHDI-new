@@ -153,6 +153,9 @@ export const aiModels = [
   { id: 'hdi-grok', name: 'Groq Llama 70B', description: 'Super cepat via Groq', icon: '🌌', category: 'chat', badge: '⚡ Fast' },
   { id: 'hdi-grok-mini', name: 'Groq Llama 8B', description: 'Instant via Groq', icon: '🌠', category: 'chat' },
 
+  // === WEB SEARCH (FREE) ===
+  { id: 'hdi-search', name: 'Web Search', description: 'Cari info terkini dari internet', icon: '🔍', category: 'chat', badge: '🌐 Live' },
+
   // === DIRECT GEMINI (FREE) === [DISABLED]
   // { id: 'hdi-4', name: 'Gemini 1.5 Flash', description: 'Google direct API (Gratis)', icon: '💫', category: 'chat' },
   // { id: 'hdi-vision', name: 'Gemini Vision', description: 'Analisis gambar (Gratis)', icon: '👁️', category: 'chat' },

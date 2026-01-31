@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Copy, Download, Play, RefreshCw, Maximize2, Minimize2, Check, Code, FileCode, AlertCircle, FolderOpen, File, Plus, Trash2, ChevronRight, ChevronDown, FolderPlus, Send, MessageSquare, Loader2, Sparkles } from 'lucide-react';
+import { X, Copy, Download, Play, RefreshCw, Maximize2, Minimize2, Check, Code, FileCode, AlertCircle, FolderOpen, File, Plus, Trash2, ChevronRight, ChevronDown, FolderPlus, Send, MessageSquare, Loader2, Sparkles, Undo, Redo } from 'lucide-react';
 import { cn } from '../lib/utils';
 import config from '../config';
 
@@ -33,6 +33,35 @@ const Canvas = ({ isOpen, onClose, code, language, onUpdate }) => {
   const [activeFileId, setActiveFileId] = React.useState(null);
   const [expandedFolders, setExpandedFolders] = React.useState(['src', 'public']);
 
+  // History state
+  const [fileHistory, setFileHistory] = React.useState([]);
+  const [historyIndex, setHistoryIndex] = React.useState(-1);
+
+  // Push to history
+  const pushToHistory = (newFiles) => {
+    const newHistory = fileHistory.slice(0, historyIndex + 1);
+    newHistory.push(newFiles);
+    setFileHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+
+  // Undo/Redo handlers
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const newIndex = historyIndex - 1;
+      setHistoryIndex(newIndex);
+      setFiles(fileHistory[newIndex]);
+    }
+  };
+
+  const handleRedo = () => {
+    if (historyIndex < fileHistory.length - 1) {
+      const newIndex = historyIndex + 1;
+      setHistoryIndex(newIndex);
+      setFiles(fileHistory[newIndex]);
+    }
+  };
+
   // UI state
   const [copied, setCopied] = React.useState(false);
   const [isFullscreen, setIsFullscreen] = React.useState(false);
@@ -45,6 +74,8 @@ const Canvas = ({ isOpen, onClose, code, language, onUpdate }) => {
   // AI Chat state
   const [chatMessages, setChatMessages] = React.useState([]);
   const [chatInput, setChatInput] = React.useState('');
+  // Image upload disabled for now
+  // const [selectedImages, setSelectedImages] = React.useState([]); 
   const [isAiLoading, setIsAiLoading] = React.useState(false);
   const [showChat, setShowChat] = React.useState(true);
   const chatEndRef = React.useRef(null);
@@ -54,6 +85,8 @@ const Canvas = ({ isOpen, onClose, code, language, onUpdate }) => {
     if (code) {
       const parsedFiles = parseCodeToFiles(code, language);
       setFiles(parsedFiles);
+      setFileHistory([parsedFiles]);
+      setHistoryIndex(0);
       if (parsedFiles.length > 0) {
         setActiveFileId(parsedFiles[0].id);
       }
@@ -112,9 +145,16 @@ const Canvas = ({ isOpen, onClose, code, language, onUpdate }) => {
 
   // Update file content
   const updateFileContent = (content) => {
-    setFiles(prev => prev.map(f =>
+    const newFiles = files.map(f =>
       f.id === activeFileId ? { ...f, content } : f
-    ));
+    );
+    setFiles(newFiles);
+
+    // Debounce history push for typing
+    const timeoutId = setTimeout(() => {
+      pushToHistory(newFiles);
+    }, 1000);
+    return () => clearTimeout(timeoutId);
   };
 
   // Add new file
@@ -187,7 +227,7 @@ Gunakan language yang sesuai (javascript, html, css, dll).`;
             { role: 'system', content: systemPrompt },
             { role: 'user', content: userMessage }
           ],
-          model: 'hdi-gpt4o'
+          model: 'hdi-grok'
         })
       });
 
@@ -205,18 +245,22 @@ Gunakan language yang sesuai (javascript, html, css, dll).`;
 
       while ((match = codeBlockRegex.exec(aiResponse)) !== null) {
         const codeContent = match[2];
-        const filenameMatch = codeContent.match(/^\/\/\s*filename:\s*([^\n]+)/m);
+
+        // Robust regex to find filename in first few lines
+        // Supports: // filename: file.ext, <!-- filename: file.ext -->, /* filename: file.ext */
+        const filenameMatch = codeContent.match(/^(?:\/\/|<!--|\/\*)\s*filename:\s*([^\s]+?)(?:\s*-->|\s*\*\/)?$/m);
 
         if (filenameMatch) {
           const filename = filenameMatch[1].trim();
-          const newContent = codeContent.replace(/^\/\/\s*filename:\s*[^\n]+\n?/m, '').trim();
+          // Remove the filename comment line to get clean content
+          const newContent = codeContent.replace(/^(?:\/\/|<!--|\/\*)\s*filename:\s*[^\n]+\n?/m, '').trim();
           updatedFiles.push({ filename, content: newContent });
         }
       }
 
-      // Pattern 2: Plain text with "// filename:" markers (no code blocks)
+      // Pattern 2: Plain text with filename markers (fallback)
       if (updatedFiles.length === 0) {
-        const plainFileRegex = /\/\/\s*filename:\s*([^\n]+)\n([\s\S]*?)(?=\/\/\s*filename:|$)/gi;
+        const plainFileRegex = /(?:\/\/|<!--|\/\*)\s*filename:\s*([^\s]+?)(?:\s*-->|\s*\*\/)?\n([\s\S]*?)(?=(?:\/\/|<!--|\/\*)\s*filename:|$)/gi;
         let plainMatch;
 
         while ((plainMatch = plainFileRegex.exec(aiResponse)) !== null) {
@@ -264,6 +308,29 @@ Gunakan language yang sesuai (javascript, html, css, dll).`;
 
           return newFiles;
         });
+
+        // Push final state to history after AI update
+        // We use a timeout to let the state update settle, or use the updater callback result if we could access it directly
+        // But since we are inside an async function, we can calculate the new state and push it.
+        // Re-calculating newFiles to push to history strictly:
+        const currentFilesState = await new Promise(resolve => setFiles(prev => { resolve(prev); return prev; }));
+
+        let newHistoryFiles = [...currentFilesState];
+        updatedFiles.forEach(({ filename, content }) => {
+          const existingIndex = newHistoryFiles.findIndex(f => f.path === filename || f.name === filename);
+          if (existingIndex >= 0) {
+            newHistoryFiles[existingIndex] = { ...newHistoryFiles[existingIndex], content };
+          } else {
+            newHistoryFiles.push({
+              id: `file-${Date.now()}-${filename}`,
+              name: filename,
+              path: filename,
+              content: content,
+              language: getLanguageFromFilename(filename)
+            });
+          }
+        });
+        pushToHistory(newHistoryFiles);
 
         // Show success message
         setChatMessages(prev => [...prev, {
@@ -321,58 +388,160 @@ Gunakan language yang sesuai (javascript, html, css, dll).`;
     setPreviewKey(prev => prev + 1);
   };
 
-  // Generate preview HTML combining all files
+  // Generate preview HTML with robust multi-file support
   const generatePreviewHTML = () => {
+    // Separate files
     const htmlFile = files.find(f => f.name.endsWith('.html') || f.name.endsWith('.htm'));
     const cssFiles = files.filter(f => f.name.endsWith('.css'));
+    const jsFiles = files.filter(f => /\.(js|jsx|ts|tsx)$/.test(f.name));
+
+    // Create CSS string
     const cssContent = cssFiles.map(f => f.content).join('\n');
-    const jsFiles = files.filter(f => f.name.endsWith('.js') && !f.name.endsWith('.jsx'));
-    const jsContent = jsFiles.map(f => f.content).join('\n');
-    const jsxFiles = files.filter(f => f.name.endsWith('.jsx') || f.name.endsWith('.tsx'));
 
-    if (htmlFile) {
-      let html = htmlFile.content;
-      if (cssContent && !html.includes(cssContent)) {
-        html = html.replace('</head>', `<style>\n${cssContent}\n</style>\n</head>`);
-      }
-      if (jsContent && !html.includes(jsContent)) {
-        html = html.replace('</body>', `<script>\n${jsContent}\n</script>\n</body>`);
-      }
-      return html;
-    }
+    // Prepare files data for injection
+    const filesData = jsFiles.map(f => ({
+      name: f.name,
+      content: f.content
+    }));
 
-    if (jsxFiles.length > 0) {
-      const jsxContent = jsxFiles.map(f => f.content).join('\n');
-      return `<!DOCTYPE html>
+    // Base HTML structure
+    let baseHtml = htmlFile ? htmlFile.content : `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>body { font-family: system-ui; margin: 0; padding: 20px; } ${cssContent}</style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Preview</title>
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel">
-    ${jsxContent}
-    const componentMatch = \`${jsxContent}\`.match(/(?:function|const|class)\\s+(App|Main|\\w+Component)/);
-    if (componentMatch) {
-      try {
-        const Component = eval(componentMatch[1]);
-        ReactDOM.createRoot(document.getElementById('root')).render(<Component />);
-      } catch(e) { console.error(e); }
-    }
-  </script>
 </body>
 </html>`;
+
+    // Inject styles if needed (if not already present)
+    if (cssContent && !baseHtml.includes(cssContent)) {
+      if (baseHtml.includes('</head>')) {
+        baseHtml = baseHtml.replace('</head>', `<style>\n${cssContent}\n</style>\n</head>`);
+      } else {
+        baseHtml = `<style>${cssContent}</style>` + baseHtml;
+      }
     }
 
-    return `<!DOCTYPE html>
-<html>
-<head><meta charset="UTF-8"><style>body { font-family: system-ui; margin: 0; padding: 20px; } ${cssContent}</style></head>
-<body><div id="app">${localCode.includes('<') ? localCode : '<p>Preview</p>'}</div><script>${jsContent}</script></body>
-</html>`;
+    // Inject Babel
+    const babelScript = '<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>';
+    if (!baseHtml.includes('babel.min.js')) {
+      if (baseHtml.includes('<head>')) {
+        baseHtml = baseHtml.replace('<head>', '<head>\n' + babelScript);
+      } else {
+        baseHtml = babelScript + baseHtml;
+      }
+    }
+
+    // Prepare the script runner
+    const scriptRunner = `
+    <script>
+      window.onerror = function(message, source, lineno, colno, error) {
+        // Create an error overlay
+        const errDiv = document.createElement('div');
+        errDiv.style.cssText = 'position:fixed; top:0; left:0; right:0; padding:20px; background:#fff0f0; border-bottom:2px solid #ffcdd2; color:#d32f2f; z-index:9999; font-family:monospace;';
+        errDiv.innerHTML = '<h3>Runtime Error</h3><pre>' + message + '</pre>';
+        document.body.appendChild(errDiv);
+      };
+
+      const sourceFiles = ${JSON.stringify(filesData)};
+      const blobRegistry = {};
+
+      try {
+        // 1. Transform and Create Blobs
+        sourceFiles.forEach(file => {
+          try {
+            // Determine filename for extension checks
+            const filename = file.name;
+            const isTs = filename.endsWith('.ts') || filename.endsWith('.tsx');
+            
+            // Transform code
+            const output = Babel.transform(file.content, { 
+              presets: ['react', 'env', ...(isTs ? ['typescript'] : [])], 
+              filename: filename 
+            }).code;
+            
+            const blob = new Blob([output], {type: 'text/javascript'});
+            const blobUrl = URL.createObjectURL(blob);
+            
+            blobRegistry['./' + filename] = blobUrl;
+            
+            // Map without extension
+            const nameCheck = filename.replace(/\.[^/.]+$/, "");
+            blobRegistry['./' + nameCheck] = blobUrl;
+            
+          } catch (err) {
+            console.error('Transform error for ' + file.name, err);
+            const errDiv = document.createElement('div');
+            errDiv.style.color = 'orange';
+            errDiv.innerText = 'Transform error: ' + file.name + ' - ' + err.message;
+            document.body.appendChild(errDiv);
+          }
+        });
+
+        // 2. Import Map
+        const importMap = {
+          imports: {
+            "react": "https://esm.sh/react@18.2.0",
+            "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
+            "react-beautiful-dnd": "https://esm.sh/react-beautiful-dnd@13.1.1",
+            "lucide-react": "https://esm.sh/lucide-react@0.263.1",
+            ...blobRegistry
+          }
+        };
+
+        const mapEl = document.createElement('script');
+        mapEl.type = "importmap";
+        mapEl.textContent = JSON.stringify(importMap);
+        document.head.appendChild(mapEl);
+
+        // 3. Mount Entry Point
+        const entryFile = sourceFiles.find(f => /^(App|index|main)\.(t|j)sx?$/.test(f.name)) || sourceFiles[0];
+        
+        if (entryFile) {
+          const mountScript = document.createElement('script');
+          mountScript.type = 'module';
+          mountScript.textContent = \`
+            import React from 'react';
+            import { createRoot } from 'react-dom/client';
+            
+            try {
+              // Import the entry file
+              // We use dynamic import to catch errors during module evaluation
+              const module = await import('./\${entryFile.name}');
+              const App = module.default || module;
+
+              const rootEl = document.getElementById('root') || document.body.appendChild(document.createElement('div'));
+              if (!rootEl.id) rootEl.id = 'root';
+
+              // If it exports a React component, render it
+              if (typeof App === 'function' || (typeof App === 'object' && App.$$typeof)) {
+                const root = createRoot(rootEl);
+                root.render(React.createElement(App));
+              } 
+              // Vanilla JS side effects already ran by the import
+            } catch (err) {
+              console.error(err);
+              throw err;
+            }
+          \`;
+          document.body.appendChild(mountScript);
+        }
+      } catch (e) {
+        console.error(e);
+        document.body.insertAdjacentHTML('beforeend', '<div style="color:red">Setup Error: ' + e.message + '</div>');
+      }
+    </script>`;
+
+    // Inject script runner before body end
+    if (baseHtml.includes('</body>')) {
+      return baseHtml.replace('</body>', scriptRunner + '\n</body>');
+    } else {
+      return baseHtml + scriptRunner;
+    }
   };
 
   // Build file tree structure
@@ -416,11 +585,12 @@ Gunakan language yang sesuai (javascript, html, css, dll).`;
         );
       }
       return (
-        <button
+        <div
           key={item.id}
+          role="button"
           onClick={() => setActiveFileId(item.id)}
           className={cn(
-            'w-full flex items-center gap-2 px-2 py-1 hover:bg-[#2f2f2f] rounded text-left text-sm group',
+            'w-full flex items-center gap-2 px-2 py-1 hover:bg-[#2f2f2f] rounded text-left text-sm group cursor-pointer',
             activeFileId === item.id ? 'bg-[#2f2f2f] text-white' : 'text-gray-400'
           )}
           style={{ paddingLeft: `${depth * 12 + 20}px` }}
@@ -433,7 +603,7 @@ Gunakan language yang sesuai (javascript, html, css, dll).`;
           >
             <Trash2 className="h-3 w-3 text-red-400" />
           </button>
-        </button>
+        </div>
       );
     });
   };
@@ -457,6 +627,23 @@ Gunakan language yang sesuai (javascript, html, css, dll).`;
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <button
+            onClick={handleUndo}
+            disabled={historyIndex <= 0}
+            className="p-2 hover:bg-[#2f2f2f] rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Undo"
+          >
+            <Undo className="h-5 w-5" />
+          </button>
+          <button
+            onClick={handleRedo}
+            disabled={historyIndex >= fileHistory.length - 1}
+            className="p-2 hover:bg-[#2f2f2f] rounded-lg text-gray-400 hover:text-white transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+            title="Redo"
+          >
+            <Redo className="h-5 w-5" />
+          </button>
+          <div className="w-px h-6 bg-[#2f2f2f] mx-1" />
           <button
             onClick={() => setShowChat(!showChat)}
             className={cn(

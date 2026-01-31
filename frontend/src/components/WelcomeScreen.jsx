@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Code, BookOpen, Lightbulb, ArrowRight, Zap, Image, FileText, Globe, Brain, Wand2, Database, Atom } from 'lucide-react';
+import { Sparkles, Code, BookOpen, Lightbulb, ArrowRight, Zap, Image, FileText, Globe, Brain, Wand2, Database, Atom, Presentation, Download } from 'lucide-react';
 
 const WelcomeScreen = ({ onSuggestionClick, onFeatureClick }) => {
   const capabilities = [
@@ -9,6 +9,8 @@ const WelcomeScreen = ({ onSuggestionClick, onFeatureClick }) => {
     { icon: Globe, label: 'Web Search', color: 'text-green-400', hoverBg: 'hover:bg-green-500/20' },
     { icon: Brain, label: 'Deep Think', color: 'text-pink-400', hoverBg: 'hover:bg-pink-500/20' },
     { icon: Database, label: 'R&D Database', color: 'text-cyan-400', hoverBg: 'hover:bg-cyan-500/20' },
+    { icon: Presentation, label: 'Generate PPT', color: 'text-red-400', hoverBg: 'hover:bg-red-500/20' },
+    { icon: Download, label: 'Export Doc', color: 'text-teal-400', hoverBg: 'hover:bg-teal-500/20' },
   ];
 
   const suggestions = [
@@ -53,7 +55,7 @@ const WelcomeScreen = ({ onSuggestionClick, onFeatureClick }) => {
         <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full blur-2xl opacity-20 animate-pulse" />
         <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 flex items-center justify-center p-4 border border-emerald-500/20 shadow-2xl shadow-emerald-500/10">
           <img
-            src="/icons/logo-hdi.png"
+            src="icons/logo-hdi.png"
             alt="ChatHDI Logo"
             className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]"
           />

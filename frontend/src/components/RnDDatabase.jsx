@@ -1,6 +1,6 @@
 import React from 'react';
-import { 
-  Search, Filter, Download, FileText, BookOpen, Beaker, FlaskConical, 
+import {
+  Search, Filter, Download, FileText, BookOpen, Beaker, FlaskConical,
   Building2, Globe, Calendar, Users, ExternalLink, ChevronDown, X,
   FileSpreadsheet, FileJson, Printer, Star, Bookmark, Share2,
   Microscope, Atom, Zap, Wind, Sun, Leaf, Database, TrendingUp,
@@ -8,7 +8,9 @@ import {
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
+import { supabase } from '../supabaseClient';
+import config from '../config';
+// API_URL removed as we use Supabase directly
 
 const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
   const [activeTab, setActiveTab] = React.useState('papers');
@@ -20,7 +22,7 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
   const [detailItem, setDetailItem] = React.useState(null);
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [editItem, setEditItem] = React.useState(null);
-  
+
   // Data state - fetched from backend
   const [data, setData] = React.useState({
     papers: [],
@@ -34,26 +36,58 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
   const [lastUpdated, setLastUpdated] = React.useState(null);
 
   // Fetch data from backend
+  // Fetch data from Supabase
   const fetchData = React.useCallback(async () => {
     try {
       setLoading(true);
-      
-      // Initialize database if needed
-      await fetch(`${API_URL}/api/rnd/init`, { method: 'POST' });
-      
-      // Fetch all data
-      const response = await fetch(`${API_URL}/api/rnd/all`);
-      const result = await response.json();
-      
-      setData({
-        papers: result.papers || [],
-        equipment: result.equipment || [],
-        materials: result.materials || [],
-        institutions: result.institutions || [],
-        categories: result.categories || {},
-        countries: result.countries || []
+
+      const { data: embeddings, error } = await supabase
+        .from('embeddings')
+        .select('id, metadata, content');
+
+      if (error) throw error;
+
+      // Group by type
+      const newPapers = [];
+      const newEquipment = [];
+      const newMaterials = [];
+      const newInstitutions = [];
+      const newCategories = {};
+      const newCountries = new Set();
+
+      embeddings.forEach(row => {
+        const item = { ...row.metadata, id: row.id }; // Use Supabase ID
+        const type = item.type || 'paper'; // Default to paper if missing
+
+        if (item.country) newCountries.add(item.country);
+
+        // Add to collections
+        if (type === 'paper') newPapers.push(item);
+        else if (type === 'equipment') newEquipment.push(item);
+        else if (type === 'material') newMaterials.push(item);
+        else if (type === 'institution') newInstitutions.push(item);
+
+        // Collect categories
+        if (!newCategories[type]) newCategories[type] = new Set();
+        if (item.category) newCategories[type].add(item.category);
+        if (item.type && type === 'institution') newCategories[type].add(item.type);
       });
-      setLastUpdated(result.lastUpdated);
+
+      // Convert Sets to Arrays
+      const processedCategories = {};
+      Object.keys(newCategories).forEach(key => {
+        processedCategories[key] = Array.from(newCategories[key]).sort();
+      });
+
+      setData({
+        papers: newPapers,
+        equipment: newEquipment,
+        materials: newMaterials,
+        institutions: newInstitutions,
+        categories: processedCategories,
+        countries: Array.from(newCountries).sort()
+      });
+      setLastUpdated(new Date().toISOString());
     } catch (error) {
       console.error('Error fetching R&D data:', error);
     } finally {
@@ -71,7 +105,7 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
   // Auto-refresh every 30 seconds for live updates
   React.useEffect(() => {
     if (!isOpen) return;
-    
+
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [isOpen, fetchData]);
@@ -85,7 +119,7 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
 
   const getFilteredData = () => {
     let items = [];
-    switch(activeTab) {
+    switch (activeTab) {
       case 'papers': items = data.papers; break;
       case 'equipment': items = data.equipment; break;
       case 'materials': items = data.materials; break;
@@ -94,9 +128,9 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
     }
 
     return items.filter(item => {
-      const matchesSearch = searchQuery === '' || 
+      const matchesSearch = searchQuery === '' ||
         JSON.stringify(item).toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || 
+      const matchesCategory = selectedCategory === 'all' ||
         item.category === selectedCategory || item.type === selectedCategory;
       const matchesCountry = selectedCountry === 'all' || item.country === selectedCountry;
       return matchesSearch && matchesCategory && matchesCountry;
@@ -104,10 +138,10 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
   };
 
   const handleExport = (format) => {
-    const items = selectedItems.length > 0 
+    const items = selectedItems.length > 0
       ? getFilteredData().filter(item => selectedItems.includes(item.id))
       : getFilteredData();
-    
+
     if (format === 'json') {
       const blob = new Blob([JSON.stringify(items, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
@@ -117,7 +151,7 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
       a.click();
     } else if (format === 'csv') {
       const headers = Object.keys(items[0] || {}).join(',');
-      const rows = items.map(item => Object.values(item).map(v => 
+      const rows = items.map(item => Object.values(item).map(v =>
         typeof v === 'object' ? JSON.stringify(v) : v
       ).join(','));
       const csv = [headers, ...rows].join('\n');
@@ -131,20 +165,20 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
   };
 
   const toggleSelect = (id) => {
-    setSelectedItems(prev => 
+    setSelectedItems(prev =>
       prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
 
   const handleAskAI = (item) => {
-    const prompt = activeTab === 'papers' 
+    const prompt = activeTab === 'papers'
       ? `Jelaskan tentang penelitian "${item.title}" oleh ${item.authors?.join(', ')}. Apa temuan utamanya dan bagaimana relevansinya dengan teknologi hidrogen?`
       : activeTab === 'equipment'
-      ? `Jelaskan fungsi dan cara kerja ${item.name} (${item.model}) dalam riset energi terbarukan. Apa aplikasi utamanya?`
-      : activeTab === 'materials'
-      ? `Jelaskan tentang material ${item.name} (${item.formula}). Apa properti, aplikasi, dan cara penanganannya dalam riset hidrogen?`
-      : `Berikan informasi tentang ${item.name}. Apa fokus riset dan fasilitas unggulan mereka di bidang energi terbarukan?`;
-    
+        ? `Jelaskan fungsi dan cara kerja ${item.name} (${item.model}) dalam riset energi terbarukan. Apa aplikasi utamanya?`
+        : activeTab === 'materials'
+          ? `Jelaskan tentang material ${item.name} (${item.formula}). Apa properti, aplikasi, dan cara penanganannya dalam riset hidrogen?`
+          : `Berikan informasi tentang ${item.name}. Apa fokus riset dan fasilitas unggulan mereka di bidang energi terbarukan?`;
+
     onAskAI(prompt);
     onClose();
   };
@@ -152,17 +186,14 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
   // CRUD Operations for Admin
   const handleDelete = async (item) => {
     if (!window.confirm(`Hapus ${item.title || item.name}?`)) return;
-    
+
     try {
-      const endpoint = activeTab === 'papers' ? 'papers' 
-        : activeTab === 'equipment' ? 'equipment'
-        : activeTab === 'materials' ? 'materials' 
-        : 'institutions';
-      
-      await fetch(`${API_URL}/api/rnd/${endpoint}/${item.id}`, {
-        method: 'DELETE'
-      });
-      
+      const { error } = await supabase
+        .from('embeddings')
+        .delete()
+        .eq('id', item.id);
+
+      if (error) throw error;
       fetchData();
     } catch (error) {
       console.error('Error deleting item:', error);
@@ -172,22 +203,49 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
 
   const handleSave = async (formData) => {
     try {
-      const endpoint = activeTab === 'papers' ? 'papers' 
+      // Prepare metadata
+      const type = activeTab === 'papers' ? 'paper'
         : activeTab === 'equipment' ? 'equipment'
-        : activeTab === 'materials' ? 'materials' 
-        : 'institutions';
-      
-      const method = editItem ? 'PUT' : 'POST';
-      const url = editItem 
-        ? `${API_URL}/api/rnd/${endpoint}/${editItem.id}`
-        : `${API_URL}/api/rnd/${endpoint}`;
-      
-      await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: formData })
-      });
-      
+          : activeTab === 'materials' ? 'material'
+            : 'institution';
+
+      const metadata = { ...formData, type };
+
+      // Generate content string for search (Simplified for Client)
+      const content = `${formData.title || formData.name} ${formData.abstract || ''} ${formData.description || ''} ${JSON.stringify(formData)}`;
+
+      // We will skip embedding generation here for now (handled by migration or future update)
+      // or use a dummy vector if required by DB constraint? No, vector can be null if not NON NULL.
+      // But we set match_documents to use it? 
+      // Ideally we call generateEmbedding(content) here.
+
+      const { generateEmbedding } = await import('../supabaseClient');
+      let embedding = [];
+      try {
+        embedding = await generateEmbedding(content);
+      } catch (e) {
+        console.warn('Embedding generation failed, saving without vector');
+      }
+
+      const payload = {
+        content,
+        metadata,
+        embedding: embedding.length > 0 ? embedding : null
+      };
+
+      if (editItem) {
+        const { error } = await supabase
+          .from('embeddings')
+          .update(payload)
+          .eq('id', editItem.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('embeddings')
+          .insert(payload);
+        if (error) throw error;
+      }
+
       setShowAddModal(false);
       setEditItem(null);
       fetchData();
@@ -224,7 +282,7 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button 
+            <button
               onClick={fetchData}
               className="p-2 hover:bg-[#2f2f2f] rounded-lg text-gray-400 hover:text-white"
               title="Refresh data"
@@ -245,8 +303,8 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
               onClick={() => { setActiveTab(tab.id); setSelectedCategory('all'); }}
               className={cn(
                 'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap',
-                activeTab === tab.id 
-                  ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white border border-blue-500/30' 
+                activeTab === tab.id
+                  ? 'bg-gradient-to-r from-blue-500/20 to-purple-500/20 text-white border border-blue-500/30'
                   : 'text-gray-400 hover:text-white hover:bg-[#2f2f2f]'
               )}
             >
@@ -255,7 +313,7 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
               <span className="px-1.5 py-0.5 rounded bg-[#2f2f2f] text-xs">{tab.count}</span>
             </button>
           ))}
-          
+
           {/* Admin Add Button */}
           {isAdmin && (
             <button
@@ -349,9 +407,9 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredData.map(item => (
-                <DataCard 
-                  key={item.id} 
-                  item={item} 
+                <DataCard
+                  key={item.id}
+                  item={item}
                   type={activeTab}
                   isSelected={selectedItems.includes(item.id)}
                   onSelect={() => toggleSelect(item.id)}
@@ -374,9 +432,9 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
 
         {/* Detail Modal */}
         {detailItem && (
-          <DetailModal 
-            item={detailItem} 
-            type={activeTab} 
+          <DetailModal
+            item={detailItem}
+            type={activeTab}
             onClose={() => setDetailItem(null)}
             onAskAI={() => handleAskAI(detailItem)}
           />
@@ -401,7 +459,7 @@ const RnDDatabase = ({ isOpen, onClose, onAskAI, isAdmin = false }) => {
 // Data Card Component
 const DataCard = ({ item, type, isSelected, onSelect, onDetail, onAskAI, isAdmin, onEdit, onDelete }) => {
   const getIcon = () => {
-    switch(type) {
+    switch (type) {
       case 'papers': return <FileText className="h-5 w-5" />;
       case 'equipment': return <Microscope className="h-5 w-5" />;
       case 'materials': return <Atom className="h-5 w-5" />;
@@ -437,13 +495,13 @@ const DataCard = ({ item, type, isSelected, onSelect, onDetail, onAskAI, isAdmin
         <div className="flex items-center gap-1">
           {isAdmin && (
             <>
-              <button 
+              <button
                 onClick={(e) => { e.stopPropagation(); onEdit(); }}
                 className="p-1.5 rounded-lg hover:bg-blue-500/20 text-gray-500 hover:text-blue-400"
               >
                 <Edit className="h-4 w-4" />
               </button>
-              <button 
+              <button
                 onClick={(e) => { e.stopPropagation(); onDelete(); }}
                 className="p-1.5 rounded-lg hover:bg-red-500/20 text-gray-500 hover:text-red-400"
               >
@@ -451,7 +509,7 @@ const DataCard = ({ item, type, isSelected, onSelect, onDetail, onAskAI, isAdmin
               </button>
             </>
           )}
-          <button 
+          <button
             onClick={(e) => { e.stopPropagation(); onSelect(); }}
             className={cn(
               'p-1.5 rounded-lg transition-colors',
@@ -485,8 +543,8 @@ const DataCard = ({ item, type, isSelected, onSelect, onDetail, onAskAI, isAdmin
           <div className={cn(
             'inline-flex px-2 py-0.5 rounded text-xs font-medium mb-3',
             item.status === 'Available' ? 'bg-green-500/20 text-green-400' :
-            item.status === 'In Use' ? 'bg-yellow-500/20 text-yellow-400' :
-            'bg-red-500/20 text-red-400'
+              item.status === 'In Use' ? 'bg-yellow-500/20 text-yellow-400' :
+                'bg-red-500/20 text-red-400'
           )}>
             {item.status}
           </div>
@@ -519,13 +577,13 @@ const DataCard = ({ item, type, isSelected, onSelect, onDetail, onAskAI, isAdmin
       </div>
 
       <div className="flex items-center gap-2">
-        <button 
+        <button
           onClick={onDetail}
           className="flex-1 px-3 py-1.5 bg-[#2f2f2f] hover:bg-[#3a3a3a] rounded-lg text-sm text-gray-300 transition-colors"
         >
           Detail
         </button>
-        <button 
+        <button
           onClick={onAskAI}
           className="flex-1 px-3 py-1.5 bg-gradient-to-r from-blue-500/20 to-purple-500/20 hover:from-blue-500/30 hover:to-purple-500/30 border border-blue-500/30 rounded-lg text-sm text-blue-400 transition-colors"
         >
@@ -549,7 +607,7 @@ const DetailModal = ({ item, type, onClose, onAskAI }) => {
         </div>
         <div className="p-6 space-y-4">
           <h2 className="text-xl font-bold text-white">{item.title || item.name}</h2>
-          
+
           {type === 'papers' && (
             <>
               <div className="space-y-2 text-sm">
@@ -651,7 +709,7 @@ const DetailModal = ({ item, type, onClose, onAskAI }) => {
           )}
 
           <div className="flex gap-3 pt-4">
-            <button 
+            <button
               onClick={onAskAI}
               className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-400 hover:to-purple-400 rounded-xl text-white font-medium transition-colors"
             >
@@ -699,7 +757,7 @@ const AddEditModal = ({ type, item, categories, countries, onClose, onSave }) =>
               {field === 'category' || field === 'type' ? (
                 <select
                   value={formData[field] || ''}
-                  onChange={(e) => setFormData({...formData, [field]: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
                   className="w-full bg-[#2f2f2f] text-white px-4 py-2 rounded-lg outline-none"
                 >
                   <option value="">Pilih...</option>
@@ -708,7 +766,7 @@ const AddEditModal = ({ type, item, categories, countries, onClose, onSave }) =>
               ) : field === 'country' ? (
                 <select
                   value={formData[field] || ''}
-                  onChange={(e) => setFormData({...formData, [field]: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
                   className="w-full bg-[#2f2f2f] text-white px-4 py-2 rounded-lg outline-none"
                 >
                   <option value="">Pilih...</option>
@@ -717,14 +775,14 @@ const AddEditModal = ({ type, item, categories, countries, onClose, onSave }) =>
               ) : field === 'abstract' ? (
                 <textarea
                   value={formData[field] || ''}
-                  onChange={(e) => setFormData({...formData, [field]: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
                   className="w-full bg-[#2f2f2f] text-white px-4 py-2 rounded-lg outline-none h-24"
                 />
               ) : field === 'authors' || field === 'keywords' ? (
                 <input
                   type="text"
                   value={Array.isArray(formData[field]) ? formData[field].join(', ') : formData[field] || ''}
-                  onChange={(e) => setFormData({...formData, [field]: e.target.value.split(',').map(s => s.trim())})}
+                  onChange={(e) => setFormData({ ...formData, [field]: e.target.value.split(',').map(s => s.trim()) })}
                   placeholder="Pisahkan dengan koma"
                   className="w-full bg-[#2f2f2f] text-white px-4 py-2 rounded-lg outline-none"
                 />
@@ -732,7 +790,7 @@ const AddEditModal = ({ type, item, categories, countries, onClose, onSave }) =>
                 <input
                   type={['year', 'citations', 'employees', 'publications', 'stock'].includes(field) ? 'number' : 'text'}
                   value={formData[field] || ''}
-                  onChange={(e) => setFormData({...formData, [field]: e.target.value})}
+                  onChange={(e) => setFormData({ ...formData, [field]: e.target.value })}
                   className="w-full bg-[#2f2f2f] text-white px-4 py-2 rounded-lg outline-none"
                 />
               )}
