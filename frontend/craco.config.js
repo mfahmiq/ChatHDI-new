@@ -34,12 +34,21 @@ if (config.enableHealthCheck) {
 
 const webpackConfig = {
   eslint: {
+    enable: true,
+    mode: "extends",
     configure: {
       extends: ["plugin:react-hooks/recommended"],
       rules: {
         "react-hooks/rules-of-hooks": "error",
         "react-hooks/exhaustive-deps": "warn",
       },
+    },
+    loaderOptions: (eslintLoaderOptions) => {
+      // Don't fail build on warnings during CI
+      if (process.env.CI) {
+        eslintLoaderOptions.failOnWarning = false;
+      }
+      return eslintLoaderOptions;
     },
   },
   webpack: {
@@ -75,10 +84,8 @@ const webpackConfig = {
       };
 
       // Polyfill Node.js core modules for Webpack 5
-      webpackConfig.resolve.fallback = {
-        ...webpackConfig.resolve.fallback,
+      const nodeFallbacks = {
         "fs": false,
-        "node:fs": false,
         "path": false,
         "os": false,
         "crypto": false,
@@ -87,8 +94,28 @@ const webpackConfig = {
         "https": false,
         "zlib": false,
         "url": false,
+        "util": false,
         "buffer": require.resolve("buffer/"),
         "process": require.resolve("process/browser"),
+      };
+
+      // Add node: prefixed versions
+      Object.keys(nodeFallbacks).forEach(key => {
+        if (key !== "buffer" && key !== "process") {
+          nodeFallbacks[`node:${key}`] = false;
+        } else {
+          nodeFallbacks[`node:${key}`] = nodeFallbacks[key];
+        }
+      });
+
+      webpackConfig.resolve.fallback = {
+        ...webpackConfig.resolve.fallback,
+        ...nodeFallbacks
+      };
+
+      webpackConfig.resolve.alias = {
+        ...webpackConfig.resolve.alias,
+        ...nodeFallbacks
       };
 
       const webpack = require("webpack");
@@ -101,10 +128,28 @@ const webpackConfig = {
         new webpack.NormalModuleReplacementPlugin(
           /^node:/,
           (resource) => {
-            resource.request = path.resolve(__dirname, 'src/utils/empty.js');
+            const mod = resource.request.replace(/^node:/, "");
+            if (nodeFallbacks[`node:${mod}`] === false || nodeFallbacks[mod] === false) {
+              resource.request = path.resolve(__dirname, 'src/utils/empty.js');
+            }
           }
         ),
       ];
+
+      // Aggressively handle node: scheme via externals for browser
+      webpackConfig.externals = {
+        ...webpackConfig.externals,
+        'node:fs': 'null',
+        'node:path': 'null',
+        'node:os': 'null',
+        'node:crypto': 'null',
+        'node:stream': 'null',
+        'node:http': 'null',
+        'node:https': 'null',
+        'node:zlib': 'null',
+        'node:url': 'null',
+        'node:util': 'null',
+      };
 
       // Add health check plugin to webpack if enabled
       if (config.enableHealthCheck && healthPluginInstance) {

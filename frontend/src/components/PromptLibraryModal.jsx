@@ -1,33 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { X, Plus, Trash2, Edit2, Command, Search, Star, MessageSquare } from 'lucide-react';
 
+// Default templates
+const defaultPrompts = [
+    {
+        id: 'def-1',
+        title: 'Analyze Code',
+        content: 'Please analyze the following code for bugs, performance issues, and security vulnerabilities. Providing suggestions for improvement.\n\nCode:',
+        tags: 'coding, review'
+    },
+    {
+        id: 'def-2',
+        title: 'Explain Like I\'m 5',
+        content: 'Explain the following concept like I am 5 years old, using simple analogies:\n\nTopic:',
+        tags: 'learning, simple'
+    },
+    {
+        id: 'def-3',
+        title: 'Write Email',
+        content: 'Write a professional email about [TOPIC] to [RECIPIENT]. The tone should be [TONE].',
+        tags: 'writing, productivity'
+    }
+];
+
 const PromptLibraryModal = ({ isOpen, onClose, onSelectPrompt }) => {
     const [prompts, setPrompts] = useState([]);
     const [searchQuery, setSearchQuery] = useState('');
     const [isEditing, setIsEditing] = useState(false);
     const [currentPrompt, setCurrentPrompt] = useState({ title: '', content: '', tags: '' });
-
-    // Default templates
-    const defaultPrompts = [
-        {
-            id: 'def-1',
-            title: 'Analyze Code',
-            content: 'Please analyze the following code for bugs, performance issues, and security vulnerabilities. Providing suggestions for improvement.\n\nCode:',
-            tags: 'coding, review'
-        },
-        {
-            id: 'def-2',
-            title: 'Explain Like I\'m 5',
-            content: 'Explain the following concept like I am 5 years old, using simple analogies:\n\nTopic:',
-            tags: 'learning, simple'
-        },
-        {
-            id: 'def-3',
-            title: 'Write Email',
-            content: 'Write a professional email about [TOPIC] to [RECIPIENT]. The tone should be [TONE].',
-            tags: 'writing, productivity'
-        }
-    ];
 
     useEffect(() => {
         // Load from localStorage
