@@ -133,6 +133,14 @@ module.exports = {
         webpackConfig.plugins.push(healthPluginInstance);
       }
 
+      // 6. Disable ModuleScopePlugin to allow imports outside src (fixes Vercel buffer issue)
+      const scopePluginIndex = webpackConfig.resolve.plugins.findIndex(
+        ({ constructor }) => constructor && constructor.name === 'ModuleScopePlugin'
+      );
+      if (scopePluginIndex !== -1) {
+        webpackConfig.resolve.plugins.splice(scopePluginIndex, 1);
+      }
+
       return webpackConfig;
     },
   },
