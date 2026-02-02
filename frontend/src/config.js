@@ -20,7 +20,10 @@ const config = {
         VIDEO_GENERATION: true,
         PPTX_GENERATION: true,
         RND_DATABASE: true
-    }
+    },
+
+    // Admin Users (Emails)
+    ADMIN_EMAILS: ['dwollopus@gmail.com', 'm.fahmiqobo@gmail.com', 'admin@example.com']
 };
 
 // Log config in development mode

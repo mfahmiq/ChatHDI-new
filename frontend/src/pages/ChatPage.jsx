@@ -55,6 +55,12 @@ const ChatPage = () => {
   // Load data from Supabase
   React.useEffect(() => {
     if (!user) return; // Don't fetch if not logged in
+
+    // Check Admin Status
+    if (config.ADMIN_EMAILS && config.ADMIN_EMAILS.includes(user.email)) {
+      setIsAdmin(true);
+    }
+
     const loadData = async () => {
       try {
         const [convs, projs] = await Promise.all([
