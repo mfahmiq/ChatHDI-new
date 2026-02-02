@@ -120,7 +120,7 @@ class PPTXService:
         subtitle_box = slide.shapes.add_textbox(Inches(1), Inches(5), Inches(11.333), Inches(0.5))
         tf = subtitle_box.text_frame
         p = tf.paragraphs[0]
-        p.text = "ChatHDI - Hydrogen Development Indonesia"
+        p.text = "ChatHDI - PT. Hidro Dinamika Internasional"
         p.font.size = Pt(20)
         p.font.color.rgb = HDI_GREEN
         p.alignment = PP_ALIGN.CENTER

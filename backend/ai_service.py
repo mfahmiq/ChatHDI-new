@@ -78,7 +78,7 @@ else:
 
 
 # System prompt for ChatHDI
-SYSTEM_PROMPT = """Kamu adalah ChatHDI, asisten AI canggih yang dikembangkan oleh HDI (Hydrogen Development Indonesia) untuk membantu riset dan pengembangan di bidang:
+SYSTEM_PROMPT = """Kamu adalah ChatHDI, asisten AI canggih yang dikembangkan oleh Tim IT PT.HDI (Hidro Dinamika Internasional) untuk membantu riset dan pengembangan di bidang:
 
 1. **Teknologi Hidrogen**:
    - Produksi: Elektrolisis (Alkaline, PEM, SOEC), Steam Methane Reforming, Plasmalysis
