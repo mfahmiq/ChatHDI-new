@@ -4,7 +4,7 @@
 const config = {
     // API URL - set REACT_APP_API_URL in environment for production
     // Remove trailing slash to prevent double slash issues
-    API_URL: (process.env.REACT_APP_API_URL || 'https://fahmi1-chathdi-api.hf.space/api').replace(/\/+$/, ''),
+    API_URL: (process.env.REACT_APP_API_URL || 'https://fahmi1-chathdi-be.hf.space/api').replace(/\/+$/, ''),
     SUPABASE_URL: process.env.REACT_APP_SUPABASE_URL || 'https://ziiyznxuxmrrpdnojthc.supabase.co',
     SUPABASE_ANON_KEY: process.env.REACT_APP_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InppaXl6bnh1eG1ycnBkbm9qdGhjIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1MzMyNDQsImV4cCI6MjA4NTEwOTI0NH0.MDGjt3dnMJW_9ViluMc_zQA3oQCrBbZ2hRB8Csf7zEA',
 
