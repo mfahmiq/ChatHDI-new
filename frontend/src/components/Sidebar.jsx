@@ -214,7 +214,7 @@ const Sidebar = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 flex items-center justify-center">
-                <img src="/icons/logo-hdi.png" alt="Logo" className="w-full h-full object-contain" />
+                <img src="logo-hdi.png" alt="Logo" className="w-full h-full object-contain" />
               </div>
               <span className="font-semibold text-white">ChatHDI</span>
             </div>

@@ -764,8 +764,15 @@ Buat konten yang profesional, informatif, dan sesuai dengan topik.`;
   const handleShareChat = async () => {
     if (!activeConversation) return;
 
+    // Determine Base URL
+    let baseUrl = window.location.origin;
+    // If in Electron (file://) or localhost, prefer config.APP_URL if valid
+    if (window.location.protocol === 'file:') {
+      baseUrl = config.APP_URL;
+    }
+
     // Generate Share Link (Hash Router format)
-    const shareUrl = `${window.location.origin}/#/share/${activeConversation.id}`;
+    const shareUrl = `${baseUrl}/#/share/${activeConversation.id}`;
     const title = activeConversation.title || 'ChatHDI Conversation';
 
     const shareData = {

@@ -4,6 +4,7 @@ import { HashRouter, Routes, Route, Navigate, useLocation } from 'react-router-d
 import ChatPage from './pages/ChatPage';
 import DownloadPage from './pages/DownloadPage';
 import AuthPage from './pages/AuthPage';
+import UpdatePasswordPage from './pages/UpdatePasswordPage';
 import SharedChatPage from './pages/SharedChatPage';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -31,8 +32,8 @@ const ProtectedRoute = ({ children }) => {
 function App() {
   return (
     <div className="App">
-      <AuthProvider>
-        <HashRouter>
+      <HashRouter>
+        <AuthProvider>
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
 
@@ -53,13 +54,14 @@ function App() {
             } />
 
             <Route path="/share/:shareId" element={<SharedChatPage />} />
+            <Route path="/update-password" element={<UpdatePasswordPage />} />
 
             <Route path="/download" element={<DownloadPage />} />
             <Route path="/install" element={<DownloadPage />} />
           </Routes>
           <PWAInstallPrompt />
-        </HashRouter>
-      </AuthProvider>
+        </AuthProvider>
+      </HashRouter>
     </div>
   );
 }

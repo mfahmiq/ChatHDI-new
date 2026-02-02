@@ -10,8 +10,10 @@ const AuthPage = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-    const { login, register } = useAuth();
+    const { login, register, resetPassword } = useAuth();
     const navigate = useNavigate();
+    const [isResetCtx, setIsResetCtx] = useState(false); // State to toggle reset password mode
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -19,7 +21,12 @@ const AuthPage = () => {
         setLoading(true);
 
         try {
-            if (isLogin) {
+            if (isResetCtx) {
+                await resetPassword(email);
+                setError('Link reset password telah dikirim ke email Anda.');
+                setLoading(false);
+                return;
+            } else if (isLogin) {
                 await login(email, password);
             } else {
                 const data = await register(email, password);
@@ -45,11 +52,11 @@ const AuthPage = () => {
                 {/* Header */}
                 <div className="p-8 pb-0 text-center">
                     <div className="w-20 h-20 mx-auto mb-4">
-                        <img src="/icons/logo-hdi.png" alt="HDI Logo" className="w-16 h-16 object-contain" />
+                        <img src="logo-hdi.png" alt="HDI Logo" className="w-16 h-16 object-contain" />
                     </div>
                     <h2 className="text-2xl font-bold mb-2">Welcome to ChatHDI</h2>
                     <p className="text-gray-400">
-                        {isLogin ? 'Masuk untuk melanjutkan' : 'Daftar akun baru'}
+                        {isResetCtx ? 'Reset Password' : (isLogin ? 'Masuk untuk melanjutkan' : 'Daftar akun baru')}
                     </p>
                 </div>
 
@@ -79,20 +86,34 @@ const AuthPage = () => {
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
-                                <input
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    className="w-full bg-[#171717] border border-[#404040] rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:border-emerald-500 text-white placeholder-gray-500"
-                                    placeholder="••••••••"
-                                    required
-                                />
+                        {!isResetCtx && (
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                                <div className="relative">
+                                    <Lock className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
+                                    <input
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        className="w-full bg-[#171717] border border-[#404040] rounded-lg pl-10 pr-4 py-2 focus:outline-none focus:border-emerald-500 text-white placeholder-gray-500"
+                                        placeholder="••••••••"
+                                        required={!isResetCtx}
+                                    />
+                                </div>
+                                <div className="text-right mt-1">
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsResetCtx(true);
+                                            setError('');
+                                        }}
+                                        className="text-xs text-sm text-gray-400 hover:text-emerald-400 transition-colors"
+                                    >
+                                        Lupa Password?
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         <button
                             type="submit"
@@ -105,19 +126,34 @@ const AuthPage = () => {
                                     Loading...
                                 </>
                             ) : (
-                                isLogin ? 'Masuk' : 'Daftar'
+                                isResetCtx ? 'Kirim Link Reset' : (isLogin ? 'Masuk' : 'Daftar')
                             )}
                         </button>
                     </form>
 
                     <div className="mt-6 text-center text-sm text-gray-400">
-                        {isLogin ? 'Belum punya akun? ' : 'Sudah punya akun? '}
-                        <button
-                            onClick={() => setIsLogin(!isLogin)}
-                            className="text-emerald-400 hover:text-emerald-300 font-medium hover:underline focus:outline-none"
-                        >
-                            {isLogin ? 'Daftar sekarang' : 'Masuk di sini'}
-                        </button>
+                        {isResetCtx ? (
+                            <button
+                                onClick={() => {
+                                    setIsResetCtx(false);
+                                    setIsLogin(true);
+                                    setError('');
+                                }}
+                                className="text-emerald-400 hover:text-emerald-300 font-medium hover:underline focus:outline-none"
+                            >
+                                Kembali ke Masuk
+                            </button>
+                        ) : (
+                            <>
+                                {isLogin ? 'Belum punya akun? ' : 'Sudah punya akun? '}
+                                <button
+                                    onClick={() => setIsLogin(!isLogin)}
+                                    className="text-emerald-400 hover:text-emerald-300 font-medium hover:underline focus:outline-none"
+                                >
+                                    {isLogin ? 'Daftar sekarang' : 'Masuk di sini'}
+                                </button>
+                            </>
+                        )}
                     </div>
                 </div>
             </div>

@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
 
+import { useNavigate } from 'react-router-dom';
+
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
     useEffect(() => {
         // Check active session
@@ -18,13 +21,16 @@ export const AuthProvider = ({ children }) => {
         });
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+            if (event === 'PASSWORD_RECOVERY') {
+                navigate('/update-password');
+            }
             setUser(session?.user ?? null);
             setLoading(false);
         });
 
         return () => subscription.unsubscribe();
-    }, []);
+    }, [navigate]);
 
     const login = async (email, password) => {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -53,13 +59,27 @@ export const AuthProvider = ({ children }) => {
         if (error) throw error;
     };
 
+    const resetPassword = async (email) => {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: window.location.origin,
+        });
+        if (error) throw error;
+    };
+
+    const updatePassword = async (newPassword) => {
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) throw error;
+    };
+
     const value = {
         user,
         loading,
         login,
         loginWithGoogle,
         register,
-        logout
+        logout,
+        resetPassword,
+        updatePassword
     };
 
     if (loading) {
