@@ -5,9 +5,42 @@ import config from './config';
 const supabaseUrl = config.SUPABASE_URL;
 const supabaseAnonKey = config.SUPABASE_ANON_KEY;
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Check if user previously chose "Remember Me"
+const getStoragePreference = () => {
+    // Check if rememberMe was explicitly set to false
+    const rememberMe = localStorage.getItem('rememberMe');
+    return rememberMe !== 'false'; // Default to true (remember)
+};
 
-// Singleton for Embedding Pipeline
+// Create Supabase client with appropriate storage
+const createSupabaseClientWithStorage = (persistSession = true) => {
+    return createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+            storage: persistSession ? localStorage : sessionStorage,
+            autoRefreshToken: true,
+            persistSession: persistSession
+        }
+    });
+};
+
+// Initialize with stored preference
+export let supabase = createSupabaseClientWithStorage(getStoragePreference());
+
+// Function to reinitialize Supabase with new storage preference
+export const reinitializeSupabase = (rememberMe = true) => {
+    // Store the preference
+    if (rememberMe) {
+        localStorage.setItem('rememberMe', 'true');
+        sessionStorage.removeItem('rememberMe');
+    } else {
+        localStorage.setItem('rememberMe', 'false');
+    }
+
+    // Recreate the client with new storage settings
+    supabase = createSupabaseClientWithStorage(rememberMe);
+    return supabase;
+};
+
 let embeddingPipeline = null;
 
 const getEmbeddingPipeline = async () => {

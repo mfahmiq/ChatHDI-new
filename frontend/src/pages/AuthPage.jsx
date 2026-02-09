@@ -9,6 +9,7 @@ const AuthPage = () => {
     const [password, setPassword] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [rememberMe, setRememberMe] = useState(true); // Default: checked
 
     const { login, register, resetPassword } = useAuth();
     const navigate = useNavigate();
@@ -27,7 +28,7 @@ const AuthPage = () => {
                 setLoading(false);
                 return;
             } else if (isLogin) {
-                await login(email, password);
+                await login(email, password, rememberMe);
             } else {
                 const data = await register(email, password);
                 // If sign up successful but no session, it means email confirmation is required
@@ -100,7 +101,19 @@ const AuthPage = () => {
                                         required={!isResetCtx}
                                     />
                                 </div>
-                                <div className="text-right mt-1">
+                                <div className="flex items-center justify-between mt-2">
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            type="checkbox"
+                                            id="rememberMe"
+                                            checked={rememberMe}
+                                            onChange={(e) => setRememberMe(e.target.checked)}
+                                            className="w-4 h-4 rounded border-gray-600 bg-[#171717] text-emerald-500 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer"
+                                        />
+                                        <label htmlFor="rememberMe" className="text-sm text-gray-400 cursor-pointer select-none">
+                                            Remember Me
+                                        </label>
+                                    </div>
                                     <button
                                         type="button"
                                         onClick={() => {

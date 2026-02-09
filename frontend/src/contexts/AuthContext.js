@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { supabase, reinitializeSupabase } from '../supabaseClient';
 
 import { useNavigate } from 'react-router-dom';
 import config from '../config';
@@ -33,8 +33,10 @@ export const AuthProvider = ({ children }) => {
         return () => subscription.unsubscribe();
     }, [navigate]);
 
-    const login = async (email, password) => {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const login = async (email, password, rememberMe = true) => {
+        // Reinitialize Supabase with the appropriate storage setting
+        const client = reinitializeSupabase(rememberMe);
+        const { error } = await client.auth.signInWithPassword({ email, password });
         if (error) throw error;
     };
 
