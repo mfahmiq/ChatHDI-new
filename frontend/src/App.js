@@ -5,12 +5,12 @@ import ChatPage from './pages/ChatPage';
 import DownloadPage from './pages/DownloadPage';
 import AuthPage from './pages/AuthPage';
 import UpdatePasswordPage from './pages/UpdatePasswordPage';
-
-console.log("App Loaded. UpdatePasswordPage:", UpdatePasswordPage);
 import SharedChatPage from './pages/SharedChatPage';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
+
+console.log("App Loaded. UpdatePasswordPage:", UpdatePasswordPage);
 
 const ProtectedRoute = ({ children }) => {
   const { user, loading } = useAuth();

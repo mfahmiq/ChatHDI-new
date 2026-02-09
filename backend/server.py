@@ -387,30 +387,31 @@ async def chat(request: ChatRequest):
              media_type, media_prompt = media_service.detect_media_request(last_message)
         
         # Override detection if specific media model is selected
+        logger.info(f"[CHAT] Received model: {request.model}")
         if request.model == 'hdi-image' or request.model == 'hdi-image-flux':
             media_type = 'image'
             media_prompt = last_message
+            logger.info(f"[CHAT] Image generation triggered! Model: {request.model}, Prompt: {last_message[:50]}...")
         elif request.model == 'hdi-video':
             media_type = 'video'
             media_prompt = last_message
         
-        # if media_type == 'image':
-        #     # Generate image
-        #     result = await media_service.generate_image(media_prompt)
-        #     if result['success']:
-        #         return ChatResponse(
-        #             response=f"Saya telah membuat gambar berdasarkan permintaan: \"{media_prompt[:100]}...\"",
-        #             model=result['model'],
-        #             media_type="image",
-        #             media_data=result['images']
-        #         )
-        #     else:
-        #         # Fallback to text response
-        #         response = await ai_service.chat(messages, request.model)
-        #         return ChatResponse(
-        #             response=f"Maaf, gagal membuat gambar: {result['error']}\n\nSebagai gantinya, berikut penjelasan:\n\n{response}",
-        #             model=request.model
-        #         )
+        if media_type == 'image':
+            # Generate image using Hugging Face
+            result = await media_service.generate_image(media_prompt, request.model)
+            if result['success']:
+                return ChatResponse(
+                    response=f"🎨 Gambar berhasil dibuat!\n\nPrompt: \"{media_prompt[:100]}{'...' if len(media_prompt) > 100 else ''}\"",
+                    model=result['model'],
+                    media_type="image",
+                    media_data=result['images']
+                )
+            else:
+                # Return error message
+                return ChatResponse(
+                    response=f"❌ **Gagal Membuat Gambar**\n\nDetail Error:\n`{result['error']}`\n\nSilakan coba lagi atau cek konfigurasi API Hugging Face.",
+                    model=request.model
+                )
         
         elif media_type == 'video':
             # Generate video
