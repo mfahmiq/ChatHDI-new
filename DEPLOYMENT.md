@@ -117,10 +117,9 @@ Response yang diharapkan:
 | Setting | Value |
 |---------|-------|
 | **Project Name** | `chathdi` |
-| **Framework Preset** | Create React App |
-| **Root Directory** | `frontend` |
+| **Framework Preset** | Next.js |
+| **Root Directory** | `./` (biarkan kosong / root repository) |
 | **Build Command** | `npm run build` |
-| **Output Directory** | `build` |
 
 ### C. Set Environment Variables
 
@@ -128,9 +127,10 @@ Di bagian **"Environment Variables"**, tambahkan:
 
 | Key | Value |
 |-----|-------|
-| `REACT_APP_API_URL` | `https://YOUR_USERNAME-chathdi-api.hf.space/api` |
-
-> **Ganti** `YOUR_USERNAME` dengan username HuggingFace Anda!
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://ziiyznxuxmrrpdnojthc.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | *(Anon key Supabase Anda)* |
+| `NEXT_PUBLIC_API_URL` | `/api` |
+| `GROQ_API_KEY` | *(API key Groq Anda)* |
 
 ### D. Deploy
 
