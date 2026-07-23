@@ -5,6 +5,8 @@ import { formatLocalRagContext, searchLocalKnowledge } from '@/lib/rag/localRagS
 import { generateEmbedding } from '@/lib/rag/embeddingService';
 import { searchSupabaseKnowledge } from '@/lib/rag/supabaseRagService';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(req) {
   try {
     const { messages, model } = await req.json();

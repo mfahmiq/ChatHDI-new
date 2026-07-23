@@ -20,7 +20,10 @@ const createSupabaseClientWithStorage = (persistSession = true) => {
         ? (persistSession ? localStorage : sessionStorage)
         : undefined;
 
-    return createClient(supabaseUrl, supabaseAnonKey, {
+    const url = supabaseUrl || 'https://placeholder.supabase.co';
+    const key = supabaseAnonKey || 'placeholder';
+
+    return createClient(url, key, {
         auth: {
             storage: storageOption,
             autoRefreshToken: isBrowser,

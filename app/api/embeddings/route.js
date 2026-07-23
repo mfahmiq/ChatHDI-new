@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { generateEmbeddings, getEmbeddingConfig } from '@/lib/rag/embeddingService';
 
+export const dynamic = 'force-dynamic';
+
 export async function POST(request) {
   try {
     const { input } = await request.json();

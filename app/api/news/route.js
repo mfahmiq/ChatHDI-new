@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import axios from 'axios';
 import { supabase } from '@/supabaseClient';
 
+export const dynamic = 'force-dynamic';
+
 // Verified fallback image just in case
 const IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?w=800&auto=format&fit=crop&q=60';
 
