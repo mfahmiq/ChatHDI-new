@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req) {
   try {
-    const { messages, model } = await req.json();
+    const { messages, model, language = 'id' } = await req.json();
 
     console.log(`[POST /api/chat] Model requested: ${model}`);
 
@@ -67,15 +67,22 @@ export async function POST(req) {
     }
 
     const localContext = formatLocalRagContext(ragMatches);
-    const enrichedMessages = localContext
-      ? [
-          {
+    const languageInstruction = language === 'en'
+      ? 'LANGUAGE PREFERENCE: Respond in English unless the user explicitly requests another language.'
+      : 'PREFERENSI BAHASA: Jawab dalam Bahasa Indonesia kecuali pengguna secara eksplisit meminta bahasa lain.';
+    const enrichedMessages = [
+      ...(localContext
+        ? [{
             role: 'system',
             content: `KNOWLEDGE BASE LOKAL\n\n${localContext}\n\nGunakan hanya bagian yang relevan dan jangan mengarang fakta yang tidak tercantum.`,
-          },
-          ...messages,
-        ]
-      : messages;
+          }]
+        : []),
+      {
+        role: 'system',
+        content: languageInstruction,
+      },
+      ...messages,
+    ];
 
     // Standard text chat
     const responseText = await aiService.chat(enrichedMessages, model);

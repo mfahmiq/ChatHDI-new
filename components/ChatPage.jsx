@@ -31,6 +31,12 @@ const THINKING_STAGES = [
   { id: 'finalizing', label: 'Menyusun jawaban' },
 ];
 
+const getPreferredResponseLanguage = () => {
+  if (typeof window === 'undefined') return 'id';
+  const savedLanguage = window.localStorage.getItem('chathdi.responseLanguage');
+  return savedLanguage === 'en' ? 'en' : 'id';
+};
+
 const ChatPage = () => {
   const { user } = useAuth();
   const [projects, setProjects] = React.useState([]);
@@ -145,6 +151,11 @@ const ChatPage = () => {
     } catch (error) {
       console.error('Failed to delete conversation:', error);
     }
+  };
+
+  const handleClearConversations = () => {
+    setConversations([]);
+    setActiveConversation(null);
   };
 
   const handleRenameConversation = (id, newTitle) => {
@@ -296,7 +307,8 @@ const ChatPage = () => {
           headers: requestHeaders,
           body: JSON.stringify({
             messages: pptMessages,
-            model: modelOverride || selectedModel
+            model: modelOverride || selectedModel,
+            language: getPreferredResponseLanguage(),
           })
         });
 
@@ -345,7 +357,8 @@ const ChatPage = () => {
         headers: requestHeaders,
         body: JSON.stringify({
           messages: apiMessages,
-          model: modelOverride || selectedModel
+          model: modelOverride || selectedModel,
+          language: getPreferredResponseLanguage(),
         })
       });
 
@@ -592,6 +605,48 @@ const ChatPage = () => {
     setCanvasOpen(true);
   };
 
+  const handleApplyCanvasChanges = async (files, { markdown } = {}) => {
+    if (!activeConversation) {
+      throw new Error('Percakapan aktif tidak ditemukan.');
+    }
+
+    const content = `## Hasil perubahan Canvas\n\n${
+      markdown ||
+      files
+        .map(file => `### ${file.path}\n\n\`\`\`${file.language}\n${file.content}\n\`\`\``)
+        .join('\n\n')
+    }`;
+    const canvasMessage = {
+      id: `msg-${Date.now()}`,
+      role: 'assistant',
+      content,
+      timestamp: new Date(),
+      model: selectedModel,
+      source: 'canvas',
+    };
+    const updatedConversation = {
+      ...activeConversation,
+      timestamp: new Date(),
+      messages: [...activeConversation.messages, canvasMessage],
+    };
+
+    setActiveConversation(updatedConversation);
+    setConversations(previous =>
+      previous.map(conversation =>
+        conversation.id === updatedConversation.id
+          ? updatedConversation
+          : conversation
+      )
+    );
+    await saveConversationToBackend(updatedConversation);
+    setCanvasCode(
+      files
+        .map(file => `// filename: ${file.path}\n${file.content}`)
+        .join('\n\n')
+    );
+    setCanvasOpen(false);
+  };
+
   const handleGeneratePPT = async (content) => {
     setIsLoading(true);
     try {
@@ -620,7 +675,8 @@ const ChatPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: tempMessages,
-          model: selectedModel
+          model: selectedModel,
+          language: getPreferredResponseLanguage(),
         })
       });
 
@@ -689,7 +745,8 @@ Buat konten yang profesional, informatif, dan sesuai dengan topik.`;
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [{ role: 'user', content: pptPrompt }],
-          model: selectedModel
+          model: selectedModel,
+          language: getPreferredResponseLanguage(),
         })
       });
 
@@ -843,6 +900,7 @@ Buat konten yang profesional, informatif, dan sesuai dengan topik.`;
         onSelectProject={setActiveProject}
         isMobileOpen={isMobileSidebarOpen}
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
+        onClearConversations={handleClearConversations}
       />
 
       {/* Main content */}
@@ -1095,6 +1153,8 @@ Buat konten yang profesional, informatif, dan sesuai dengan topik.`;
         onClose={() => setCanvasOpen(false)}
         code={canvasCode}
         language={canvasLanguage}
+        model={selectedModel}
+        onUpdate={handleApplyCanvasChanges}
       />
 
       {/* R&D Database Modal */}

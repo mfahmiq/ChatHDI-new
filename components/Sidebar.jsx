@@ -24,7 +24,8 @@ const Sidebar = ({
   activeProject,
   onSelectProject,
   isMobileOpen,
-  onCloseMobile
+  onCloseMobile,
+  onClearConversations,
 }) => {
   const { user, logout } = useAuth();
   const [editingId, setEditingId] = React.useState(null);
@@ -425,16 +426,7 @@ const Sidebar = ({
         <SettingsModal
           onClose={() => setShowUpdateModal(false)}
           conversations={conversations}
-          setConversations={(convs) => {
-            // Callback to update parent state if conversations are cleared
-            // We need a way to propagate this up to ChatPage
-            // Since Sidebar props don't have setConversations directly but we can reload page or use a prop if available.
-            // Actually, Sidebar receives `conversations` map, but maybe safer to just reload window or handle it via a new prop?
-            // For now let's just close modal. The actual clearance happens in backend.
-            // Ideally we need onConversationsChange prop.
-            window.location.reload(); // Simple brute force update for "Clear All"
-          }}
-          setActiveConversation={onSelectConversation}
+          onConversationsCleared={onClearConversations}
         />
       )}
     </>

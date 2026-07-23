@@ -4,6 +4,226 @@ import remarkGfm from 'remark-gfm';
 import { User, Copy, Check, RefreshCw, ThumbsUp, ThumbsDown, Share, Bookmark, MoreHorizontal, Sparkles, Download, Play, Image as ImageIcon, Film, FileText, FolderOpen, StopCircle, Table, Pencil, Save, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 
+const normalizeProjectPath = value => {
+  const normalized = [];
+  String(value || '')
+    .replace(/\\/g, '/')
+    .split('/')
+    .forEach(part => {
+      if (!part || part === '.') return;
+      if (part === '..') {
+        normalized.pop();
+        return;
+      }
+      normalized.push(part);
+    });
+  return normalized.join('/');
+};
+
+const PROJECT_PATH_PATTERN =
+  /((?:[A-Za-z0-9_.@-]+\/)*[A-Za-z0-9_.@-]+\.[A-Za-z0-9]+)(?=$|[\s`*):,])/;
+
+const extractProjectPath = value => {
+  const match = String(value || '').replace(/["']/g, '').match(PROJECT_PATH_PATTERN);
+  return match ? normalizeProjectPath(match[1]) : '';
+};
+
+const getExplicitBlockPath = (code, fenceInfo, precedingContent) => {
+  const metadataMatch = String(fenceInfo || '').match(
+    /(?:file(?:name)?|path)\s*=\s*["']?([^"'\s]+)["']?/i
+  );
+  if (metadataMatch) return normalizeProjectPath(metadataMatch[1]);
+
+  const firstLines = String(code || '').split(/\r?\n/).slice(0, 6);
+  for (const line of firstLines) {
+    const labeledMatch = line.match(
+      /^\s*(?:\/\/|#|<!--|\/\*)\s*(?:file(?:name)?|path)\s*:\s*(.+?)(?:\s*-->|\s*\*\/)?\s*$/i
+    );
+    if (labeledMatch) {
+      const path = extractProjectPath(labeledMatch[1]);
+      if (path) return path;
+    }
+
+    const commentMatch = line.match(
+      /^\s*(?:\/\/|#|<!--|\/\*)\s*((?:[A-Za-z0-9_.@-]+\/)*[A-Za-z0-9_.@-]+\.[A-Za-z0-9]+)(?:\s*-->|\s*\*\/)?\s*$/
+    );
+    if (commentMatch) return normalizeProjectPath(commentMatch[1]);
+  }
+
+  const nearbyLines = String(precedingContent || '').split(/\r?\n/).slice(-6).reverse();
+  for (const line of nearbyLines) {
+    if (!/^\s*(?:#{1,6}\s+|[-*]\s+|\*\*|file(?:name)?\s*:|path\s*:)/i.test(line)) {
+      continue;
+    }
+    const path = extractProjectPath(line);
+    if (path) return path;
+  }
+
+  return '';
+};
+
+const getScriptExtension = language => {
+  const normalized = String(language || '').toLowerCase();
+  if (normalized === 'tsx' || normalized === 'typescriptreact') return 'tsx';
+  if (normalized === 'ts' || normalized === 'typescript') return 'ts';
+  if (normalized === 'jsx' || normalized === 'javascriptreact') return 'jsx';
+  return 'js';
+};
+
+const createUniqueProjectPath = (desiredPath, usedPaths) => {
+  const normalized = normalizeProjectPath(desiredPath) || 'code.txt';
+  if (!usedPaths.has(normalized)) {
+    usedPaths.add(normalized);
+    return normalized;
+  }
+
+  const dotIndex = normalized.lastIndexOf('.');
+  const base = dotIndex > normalized.lastIndexOf('/')
+    ? normalized.slice(0, dotIndex)
+    : normalized;
+  const extension = dotIndex > normalized.lastIndexOf('/')
+    ? normalized.slice(dotIndex)
+    : '';
+  let suffix = 2;
+  let candidate = `${base}-${suffix}${extension}`;
+  while (usedPaths.has(candidate)) {
+    suffix += 1;
+    candidate = `${base}-${suffix}${extension}`;
+  }
+  usedPaths.add(candidate);
+  return candidate;
+};
+
+const inferBlockPath = (block, index, isReactProject) => {
+  const language = block.language.toLowerCase();
+  const code = block.code;
+
+  if (language === 'html' || language === 'htm') return 'index.html';
+  if (language === 'markdown' || language === 'md') return 'README.md';
+  if (language === 'json') {
+    try {
+      const parsed = JSON.parse(code);
+      if (parsed?.compilerOptions) return 'tsconfig.json';
+      if (parsed?.dependencies || parsed?.devDependencies || parsed?.scripts) {
+        return 'package.json';
+      }
+    } catch {
+      // Keep the JSON as a regular project data file when it is incomplete.
+    }
+    return 'src/data.json';
+  }
+  if (language === 'css' || language === 'scss') {
+    return isReactProject
+      ? `src/styles.${language === 'scss' ? 'scss' : 'css'}`
+      : `styles.${language === 'scss' ? 'scss' : 'css'}`;
+  }
+  if (['javascript', 'js', 'jsx', 'typescript', 'ts', 'tsx'].includes(language)) {
+    const extension = getScriptExtension(language);
+    if (/defineConfig\s*\(|from\s+['"]vite['"]/.test(code)) {
+      return `vite.config.${extension === 'ts' || extension === 'tsx' ? 'ts' : 'js'}`;
+    }
+    if (/createRoot\s*\(|ReactDOM\.render\s*\(/.test(code)) {
+      return `src/main.${extension}`;
+    }
+    if (
+      /(?:export\s+default\s+)?function\s+App\b|(?:const|class)\s+App\b|export\s+default\s+App\b/.test(
+        code
+      )
+    ) {
+      return `src/App.${extension}`;
+    }
+    const componentMatch = code.match(
+      /export\s+default\s+function\s+([A-Z][A-Za-z0-9_]*)\b/
+    );
+    if (componentMatch) return `src/components/${componentMatch[1]}.${extension}`;
+    return isReactProject ? `src/code-${index + 1}.${extension}` : `app.${extension}`;
+  }
+  if (language === 'python' || language === 'py') return 'main.py';
+  if (language === 'sql') return 'database/query.sql';
+  if (['bash', 'sh', 'shell'].includes(language)) return 'scripts/setup.sh';
+  return `docs/code-${index + 1}.txt`;
+};
+
+const resolveProjectImport = (importerPath, specifier) => {
+  const directory = normalizeProjectPath(importerPath).split('/');
+  directory.pop();
+  return normalizeProjectPath([...directory, specifier].join('/'));
+};
+
+const extractAllCodeBlocks = content => {
+  const codeBlockRegex = /```([^\r\n]*)\r?\n([\s\S]*?)```/g;
+  const blocks = [];
+  let match;
+
+  while ((match = codeBlockRegex.exec(content)) !== null) {
+    const fenceInfo = match[1].trim();
+    const language =
+      fenceInfo.split(/\s+/)[0].replace(/^language-/, '') || 'code';
+    const code = match[2].replace(/\s+$/, '');
+    blocks.push({
+      language,
+      code,
+      explicitPath: getExplicitBlockPath(
+        code,
+        fenceInfo,
+        content.slice(0, match.index)
+      ),
+    });
+  }
+
+  const isReactProject = blocks.some(block =>
+    /(?:from\s+['"]react(?:-dom)?(?:\/[^'"]*)?['"]|createRoot\s*\(|<[A-Z][A-Za-z0-9]*)/.test(
+      block.code
+    )
+  );
+  const usedPaths = new Set();
+
+  blocks.forEach((block, index) => {
+    if (block.explicitPath) {
+      block.filename = block.explicitPath;
+      usedPaths.add(block.filename);
+      return;
+    }
+    if (['css', 'scss'].includes(block.language.toLowerCase())) return;
+    block.filename = createUniqueProjectPath(
+      inferBlockPath(block, index, isReactProject),
+      usedPaths
+    );
+  });
+
+  const importedStylePaths = [];
+  blocks.forEach(block => {
+    if (!block.filename) return;
+    const importPattern = /\bimport\s+['"](\.{1,2}\/[^'"]+\.(?:css|scss))['"]/g;
+    let styleMatch;
+    while ((styleMatch = importPattern.exec(block.code)) !== null) {
+      const resolved = resolveProjectImport(block.filename, styleMatch[1]);
+      if (!usedPaths.has(resolved) && !importedStylePaths.includes(resolved)) {
+        importedStylePaths.push(resolved);
+      }
+    }
+  });
+
+  blocks.forEach((block, index) => {
+    if (block.filename) return;
+    const importedPath = importedStylePaths.shift();
+    block.filename = createUniqueProjectPath(
+      importedPath || inferBlockPath(block, index, isReactProject),
+      usedPaths
+    );
+  });
+
+  const deduplicated = new Map();
+  blocks.forEach(block => {
+    deduplicated.set(block.filename, {
+      language: block.language,
+      code: block.code,
+      filename: block.filename,
+    });
+  });
+  return [...deduplicated.values()];
+};
+
 const ChatMessage = ({ message, modelName, onRegenerate, onResend, onEdit, isLast, onOpenCanvas, onGeneratePPT, onExport, onBookmark, autoSpeak, onSpeakEnd }) => {
   const [copied, setCopied] = React.useState(false);
   const [liked, setLiked] = React.useState(null);
@@ -78,46 +298,6 @@ const ChatMessage = ({ message, modelName, onRegenerate, onResend, onEdit, isLas
       console.error("Export Data Error:", error);
       alert("Gagal export data.");
     }
-  };
-
-  // Extract all code blocks from message content
-  const extractAllCodeBlocks = (content) => {
-    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
-    const blocks = [];
-    let match;
-
-    while ((match = codeBlockRegex.exec(content)) !== null) {
-      const language = match[1] || 'code';
-      const code = match[2];
-
-      // Try to detect filename from code comments
-      const filenameMatch = code.match(/^\/\/\s*(\S+\.\w+)|^#\s*(\S+\.\w+)|^<!--\s*(\S+\.\w+)/);
-      let filename = filenameMatch ? (filenameMatch[1] || filenameMatch[2] || filenameMatch[3]) : null;
-
-      // Generate filename based on language if not found
-      if (!filename) {
-        const langFileMap = {
-          html: 'index.html', htm: 'index.html',
-          css: 'styles.css', scss: 'styles.scss',
-          javascript: 'app.js', js: 'app.js',
-          jsx: 'App.jsx', tsx: 'App.tsx',
-          typescript: 'index.ts', ts: 'index.ts',
-          python: 'main.py', py: 'main.py',
-          json: 'data.json', sql: 'query.sql',
-          bash: 'script.sh', sh: 'script.sh'
-        };
-        const baseName = langFileMap[language.toLowerCase()] || `code-${blocks.length + 1}.txt`;
-        filename = baseName;
-      }
-
-      blocks.push({
-        language,
-        code,
-        filename
-      });
-    }
-
-    return blocks;
   };
 
   // Get all code blocks in this message
@@ -322,11 +502,20 @@ const ChatMessage = ({ message, modelName, onRegenerate, onResend, onEdit, isLas
                   <span className="text-xs font-medium text-gray-400">{language}</span>
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => onOpenCanvas && onOpenCanvas(code, language)}
+                      onClick={() => {
+                        if (!onOpenCanvas) return;
+                        if (allCodeBlocks.length > 1) {
+                          handleOpenAllInCanvas();
+                        } else {
+                          onOpenCanvas(code, language);
+                        }
+                      }}
                       className="flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-emerald-400"
                     >
                       <Sparkles className="h-3.5 w-3.5" />
-                      Open in Canvas
+                      {allCodeBlocks.length > 1
+                        ? `Open project (${allCodeBlocks.length} files)`
+                        : 'Open in Canvas'}
                     </button>
                     <button
                       onClick={() => navigator.clipboard.writeText(code)}
