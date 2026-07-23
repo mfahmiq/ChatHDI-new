@@ -14,18 +14,20 @@ export async function POST(req) {
     const lastMessage = messages[messages.length - 1]?.content || '';
 
     // Check if model indicates image generation
-    if (model === 'hdi-image' || model === 'hdi-image-flux' || model === 'huggingface') {
+    if (mediaService.isImageModel(model)) {
       const result = await mediaService.generateImage(lastMessage, model);
       if (result.success) {
         return NextResponse.json({
           response: `🎨 Gambar berhasil dibuat!\n\nPrompt: "${lastMessage.substring(0, 100)}${lastMessage.length > 100 ? '...' : ''}"`,
-          model: result.model,
+          model,
           media_type: "image",
-          media_data: result.images
+          media_data: result.images,
+          media_model: result.model,
+          media_mime: result.mimeType || 'image/png',
         });
       } else {
         return NextResponse.json({
-          response: `❌ **Gagal Membuat Gambar**\n\nDetail Error:\n\`${result.error}\`\n\nSilakan coba lagi atau cek konfigurasi API Hugging Face.`,
+          response: `❌ **Gagal Membuat Gambar**\n\nDetail error:\n\`${result.error}\`\n\nSilakan coba lagi atau periksa konfigurasi provider image yang dipilih.`,
           model: model,
           media_type: null,
           media_data: null

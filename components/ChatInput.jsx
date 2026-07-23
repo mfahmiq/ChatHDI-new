@@ -433,11 +433,14 @@ const ChatInput = ({
   const currentModel = aiModels.find(m => m.id === selectedModel) || aiModels[0];
   const modelIcons = {
     'hdi-qwen3-local': Brain,
+    'hdi-nvidia-nemotron-nano': Brain,
+    'hdi-nvidia-nemotron-super': Brain,
+    'hdi-nvidia-nemotron-ultra': Brain,
     'hdi-4': Zap, 'hdi-4-mini': Sparkles, 'hdi-grok': Brain,
     'hdi-grok-mini': Sparkles, 'hdi-vision': Eye, 'hdi-code': Code,
     'hdi-image': Palette, 'hdi-image-flux': Palette
   };
-  const ModelIcon = modelIcons[currentModel.id] || Zap;
+  const ModelIcon = currentModel.category === 'image' ? Palette : modelIcons[currentModel.id] || Zap;
 
   return (
     <div className="px-4 py-4 bg-[#212121]">
@@ -455,9 +458,9 @@ const ChatInput = ({
             </button>
             {showModelSelector && (
               <div className="absolute bottom-full left-0 mb-2 w-64 bg-[#2f2f2f] rounded-xl border border-[#424242] shadow-xl overflow-hidden z-50">
-                <div className="p-2">
+                <div className="max-h-[60vh] overflow-y-auto p-2">
                   {aiModels.map((model) => {
-                    const Icon = modelIcons[model.id] || Zap;
+                    const Icon = model.category === 'image' ? Palette : modelIcons[model.id] || Zap;
                     return (
                       <button key={model.id} onClick={() => { onModelChange(model.id); setShowModelSelector(false); }} className={cn('w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors', selectedModel === model.id ? 'bg-emerald-500/20 text-emerald-400' : 'hover:bg-[#424242] text-gray-300')}>
                         <Icon className="h-5 w-5" />

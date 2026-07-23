@@ -141,6 +141,22 @@ export const mockConversations = [
 ];
 
 export const aiModels = [
+  // === NVIDIA API CATALOG ===
+  { id: 'hdi-nvidia-nemotron-nano', name: 'Nemotron 3 Nano', description: 'Cepat dan efisien via NVIDIA', category: 'chat', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-nemotron-super', name: 'Nemotron 3 Super', description: 'Reasoning tingkat lanjut via NVIDIA', category: 'chat', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-nemotron-ultra', name: 'Nemotron 3 Ultra', description: 'Model Nemotron terbesar via NVIDIA', category: 'chat', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-llama-nano', name: 'Llama Nemotron Nano', description: 'Asisten ringan via NVIDIA', category: 'chat', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-llama-super', name: 'Llama Nemotron Super', description: 'Llama dengan reasoning NVIDIA', category: 'chat', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-llama', name: 'Llama 3.3 70B', description: 'Meta Llama melalui NVIDIA API', category: 'chat', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-qwen', name: 'Qwen3 Next', description: 'Qwen instruct melalui NVIDIA API', category: 'chat', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-qwen-thinking', name: 'Qwen3 Thinking', description: 'Qwen untuk penalaran kompleks', category: 'chat', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-qwen-coder', name: 'Qwen3 Coder', description: 'Spesialis pemrograman via NVIDIA', category: 'chat', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-kimi', name: 'Kimi K2', description: 'Kimi Instruct melalui NVIDIA API', category: 'chat', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-gpt-oss', name: 'GPT-OSS 120B', description: 'Model open-weight melalui NVIDIA', category: 'chat', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-phi', name: 'Phi-4 Mini', description: 'Model Microsoft yang ringan', category: 'chat', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-deepseek', name: 'DeepSeek V4 Flash', description: 'DeepSeek cepat melalui NVIDIA', category: 'chat', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-glm', name: 'GLM 5.1', description: 'GLM melalui NVIDIA API', category: 'chat', badge: 'NVIDIA' },
+
   // === OLLAMA - LOCAL/OFFLINE ===
   { id: 'hdi-qwen3-local', name: 'Qwen3 1.7B Offline', description: 'Lokal via Ollama • RAM 8 GB', icon: '🖥️', category: 'chat', badge: 'Offline' },
 
@@ -169,6 +185,11 @@ export const aiModels = [
   // { id: 'hdi-gemini-search', name: 'Gemini + Search', description: 'Google Search (perlu kartu)', icon: '🔍', category: 'chat', badge: '💳' },
 
   // === IMAGE & VIDEO (FREE) ===
+  { id: 'hdi-nvidia-image-flux2-klein', name: 'NVIDIA FLUX.2 Klein 4B', description: 'Text-to-image generasi terbaru dan cepat', icon: 'image', category: 'image', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-image-flux-schnell', name: 'NVIDIA FLUX.1 Schnell', description: 'Text-to-image cepat via NVIDIA', icon: '⚡', category: 'image', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-image-flux-dev', name: 'NVIDIA FLUX.1 Dev', description: 'Text-to-image kualitas tinggi via NVIDIA', icon: '🎨', category: 'image', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-image-sd3', name: 'NVIDIA SD3 Medium', description: 'Stable Diffusion 3 melalui NVIDIA', icon: '🖼️', category: 'image', badge: 'NVIDIA' },
+  { id: 'hdi-nvidia-image-sdxl', name: 'NVIDIA SDXL', description: 'Stable Diffusion XL melalui NVIDIA', icon: '✨', category: 'image', badge: 'NVIDIA' },
   { id: 'hdi-image', name: 'HDI Image', description: 'Generate gambar ', icon: '🎨', category: 'image' },
   { id: 'hdi-image-flux', name: 'FLUX.1', description: 'Model terbaru ', icon: '✨', category: 'image' },
   // { id: 'hdi-video', name: 'HDI Video', description: 'Generate video (Gratis)', icon: '🎬', category: 'video' } [DISABLED]

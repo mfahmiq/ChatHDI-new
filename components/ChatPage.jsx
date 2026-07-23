@@ -363,6 +363,8 @@ const ChatPage = () => {
         timestamp: new Date(),
         mediaType: data.media_type || null,
         mediaData: data.media_data || null,
+        mediaModel: data.media_model || null,
+        mediaMime: data.media_mime || null,
         model: data.model || modelOverride || selectedModel,
         ragSources: data.rag_sources || []
       };

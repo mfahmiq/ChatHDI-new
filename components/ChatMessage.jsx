@@ -1,4 +1,6 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { User, Copy, Check, RefreshCw, ThumbsUp, ThumbsDown, Share, Bookmark, MoreHorizontal, Sparkles, Download, Play, Image as ImageIcon, Film, FileText, FolderOpen, StopCircle, Table, Pencil, Save, X } from 'lucide-react';
 import { cn } from '../lib/utils';
 
@@ -159,8 +161,8 @@ const ChatMessage = ({ message, modelName, onRegenerate, onResend, onEdit, isLas
     let mimeType, extension, filename;
 
     if (mediaType === 'image') {
-      mimeType = 'image/png';
-      extension = 'png';
+      mimeType = message.mediaMime || 'image/png';
+      extension = mimeType === 'image/jpeg' ? 'jpg' : mimeType === 'image/webp' ? 'webp' : 'png';
       filename = `chathdi_image_${Date.now()}_${index}.${extension}`;
     } else if (mediaType === 'video') {
       mimeType = 'video/mp4';
@@ -192,7 +194,7 @@ const ChatMessage = ({ message, modelName, onRegenerate, onResend, onEdit, isLas
             {message.mediaType === 'image' ? (
               <div className="relative rounded-xl overflow-hidden border border-[#2f2f2f] max-w-lg">
                 <img
-                  src={`data:image/png;base64,${data}`}
+                  src={`data:${message.mediaMime || 'image/png'};base64,${data}`}
                   alt={`Generated image ${index + 1}`}
                   className="w-full h-auto"
                 />
@@ -207,7 +209,7 @@ const ChatMessage = ({ message, modelName, onRegenerate, onResend, onEdit, isLas
                 </div>
                 <div className="absolute bottom-2 left-2 flex items-center gap-1.5 px-2 py-1 bg-black/50 rounded-lg">
                   <ImageIcon className="h-3.5 w-3.5 text-emerald-400" />
-                  <span className="text-xs text-white">Nano Banana</span>
+                  <span className="text-xs text-white">{message.mediaModel || modelName || 'Image Model'}</span>
                 </div>
               </div>
             ) : message.mediaType === 'pptx' ? (
@@ -258,99 +260,99 @@ const ChatMessage = ({ message, modelName, onRegenerate, onResend, onEdit, isLas
   };
 
   const renderContent = (content) => {
-    const parts = content.split(/(```[\s\S]*?```)/);
-
-    return parts.map((part, index) => {
-      if (part.startsWith('```')) {
-        const lines = part.slice(3, -3).split('\n');
-        const language = lines[0] || 'code';
-        const code = lines.slice(1).join('\n');
-
-        return (
-          <div key={index} className="my-4 rounded-xl overflow-hidden bg-[#0d0d0d] border border-[#2f2f2f]">
-            <div className="flex items-center justify-between px-4 py-2.5 bg-[#1a1a1a] border-b border-[#2f2f2f]">
-              <span className="text-xs text-gray-400 font-medium">{language}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => onOpenCanvas && onOpenCanvas(code, language)}
-                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-emerald-400 transition-colors"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Open in Canvas
-                </button>
-                <button
-                  onClick={() => navigator.clipboard.writeText(code)}
-                  className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-white transition-colors"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  Salin
-                </button>
-              </div>
+    return (
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ children }) => <h1 className="mb-3 mt-6 text-2xl font-bold text-white first:mt-0">{children}</h1>,
+          h2: ({ children }) => <h2 className="mb-3 mt-6 text-xl font-semibold text-white first:mt-0">{children}</h2>,
+          h3: ({ children }) => <h3 className="mb-2 mt-5 text-lg font-semibold text-white first:mt-0">{children}</h3>,
+          h4: ({ children }) => <h4 className="mb-2 mt-4 font-semibold text-white first:mt-0">{children}</h4>,
+          p: ({ children }) => <p className="my-2 whitespace-pre-wrap leading-relaxed first:mt-0 last:mb-0">{children}</p>,
+          strong: ({ children }) => <strong className="font-semibold text-white">{children}</strong>,
+          em: ({ children }) => <em className="text-gray-200">{children}</em>,
+          a: ({ href, children }) => (
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-emerald-400 underline transition-colors hover:text-emerald-300"
+            >
+              {children}
+            </a>
+          ),
+          ul: ({ children }) => <ul className="my-3 list-disc space-y-1 pl-6 marker:text-emerald-500">{children}</ul>,
+          ol: ({ children }) => <ol className="my-3 list-decimal space-y-1 pl-6 marker:font-medium marker:text-emerald-500">{children}</ol>,
+          li: ({ children }) => <li className="pl-1 leading-relaxed">{children}</li>,
+          blockquote: ({ children }) => (
+            <blockquote className="my-4 border-l-4 border-emerald-500/60 bg-emerald-500/5 px-4 py-2 text-gray-300">
+              {children}
+            </blockquote>
+          ),
+          hr: () => <hr className="my-5 border-[#3a3a3a]" />,
+          table: ({ children }) => (
+            <div className="my-4 max-w-full overflow-x-auto rounded-xl border border-[#3a3a3a] bg-[#1b1b1b]">
+              <table className="min-w-full border-collapse text-left text-sm">{children}</table>
             </div>
-            <pre className="p-4 overflow-x-auto text-sm">
-              <code className="text-gray-200 font-mono">{code}</code>
-            </pre>
-          </div>
-        );
-      }
-
-      return (
-        <div key={index} className="whitespace-pre-wrap">
-          {part.split('\n').map((line, lineIndex) => {
-            // Process markdown formatting
-            let processedLine = line;
-
-            // Convert markdown links [text](url) to clickable anchor tags
-            processedLine = processedLine.replace(
-              /\[([^\]]+)\]\(([^)]+)\)/g,
-              '<a href="$2" target="_blank" rel="noopener noreferrer" class="text-emerald-400 hover:text-emerald-300 underline transition-colors">$1</a>'
-            );
-
-            // Bold text
-            processedLine = processedLine.replace(/\*\*(.+?)\*\*/g, '<strong class="text-white">$1</strong>');
-
-            // Inline code
-            processedLine = processedLine.replace(/`([^`]+)`/g, '<code class="bg-[#2f2f2f] text-emerald-400 px-1.5 py-0.5 rounded text-sm font-mono">$1</code>');
-
-            if (line.startsWith('- ') || line.startsWith('• ')) {
-              return (
-                <div key={lineIndex} className="flex gap-2 my-1 ml-2">
-                  <span className="text-emerald-500">•</span>
-                  <span dangerouslySetInnerHTML={{ __html: processedLine.slice(2) }} />
-                </div>
-              );
-            }
-
-            const numberedMatch = line.match(/^(\d+)\.\s/);
-            if (numberedMatch) {
-              return (
-                <div key={lineIndex} className="flex gap-2 my-1 ml-2">
-                  <span className="text-emerald-500 font-medium">{numberedMatch[1]}.</span>
-                  <span dangerouslySetInnerHTML={{ __html: processedLine.slice(numberedMatch[0].length) }} />
-                </div>
-              );
-            }
-
-            // Headers
-            if (line.startsWith('**') && line.endsWith('**')) {
-              return (
-                <h3 key={lineIndex} className="text-white font-semibold mt-4 mb-2">
-                  {line.slice(2, -2)}
-                </h3>
-              );
-            }
+          ),
+          thead: ({ children }) => <thead className="bg-[#2a2a2a] text-white">{children}</thead>,
+          tbody: ({ children }) => <tbody className="divide-y divide-[#353535]">{children}</tbody>,
+          tr: ({ children }) => <tr className="transition-colors even:bg-white/[0.02] hover:bg-white/[0.04]">{children}</tr>,
+          th: ({ children }) => (
+            <th className="whitespace-nowrap border-r border-[#3a3a3a] px-4 py-3 font-semibold last:border-r-0">
+              {children}
+            </th>
+          ),
+          td: ({ children }) => (
+            <td className="min-w-40 border-r border-[#303030] px-4 py-3 align-top leading-relaxed last:border-r-0">
+              {children}
+            </td>
+          ),
+          pre: ({ children }) => {
+            const codeElement = React.Children.toArray(children)[0];
+            const className = React.isValidElement(codeElement) ? codeElement.props.className || '' : '';
+            const code = React.isValidElement(codeElement)
+              ? String(codeElement.props.children || '').replace(/\n$/, '')
+              : String(children).replace(/\n$/, '');
+            const language = className.match(/language-([\w-]+)/)?.[1] || 'code';
 
             return (
-              <p
-                key={lineIndex}
-                className={line.trim() === '' ? 'h-3' : 'leading-relaxed'}
-                dangerouslySetInnerHTML={{ __html: processedLine }}
-              />
+              <div className="my-4 overflow-hidden rounded-xl border border-[#2f2f2f] bg-[#0d0d0d]">
+                <div className="flex items-center justify-between border-b border-[#2f2f2f] bg-[#1a1a1a] px-4 py-2.5">
+                  <span className="text-xs font-medium text-gray-400">{language}</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => onOpenCanvas && onOpenCanvas(code, language)}
+                      className="flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-emerald-400"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Open in Canvas
+                    </button>
+                    <button
+                      onClick={() => navigator.clipboard.writeText(code)}
+                      className="flex items-center gap-1.5 text-xs text-gray-400 transition-colors hover:text-white"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      Salin
+                    </button>
+                  </div>
+                </div>
+                <pre className="overflow-x-auto p-4 text-sm">
+                  <code className="font-mono text-gray-200">{code}</code>
+                </pre>
+              </div>
             );
-          })}
-        </div>
-      );
-    });
+          },
+          code: ({ className, children }) => (
+            <code className={cn('rounded bg-[#2f2f2f] px-1.5 py-0.5 font-mono text-sm text-emerald-400', className)}>
+              {children}
+            </code>
+          ),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    );
   };
 
   return (
